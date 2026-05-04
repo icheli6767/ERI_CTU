@@ -1,0 +1,17 @@
+# wrangler.toml — Cloudflare Pages project configuration
+# Deploy with:  npx wrangler pages deploy . --project-name eri-dashboard
+#
+# Or use the Cloudflare Dashboard (no CLI required):
+#   1. Push this folder to a GitHub repo.
+#   2. Cloudflare Dashboard → Pages → Connect to Git → select repo.
+#   3. Build settings:
+#        Framework preset : None
+#        Build command    : (leave blank)
+#        Build output dir : /
+#   4. Click Save and Deploy.
+
+name       = "eri-dashboard"
+pages_build_output_dir = "."
+
+# Compatibility flags — use the latest date you tested against.
+compatibility_date = "2024-09-01"

@@ -1,0 +1,20 @@
+/*
+  # Cloudflare Pages — _headers
+  # Applied to every response from this static site.
+  # Docs: https://developers.cloudflare.com/pages/configuration/headers/
+
+  # ── Security headers ──────────────────────────────────────
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), camera=(), microphone=()
+
+  # ── Allow the dashboard to reach HiveMQ (WSS) and GitHub API ──
+  # Content-Security-Policy covers scripts from cdnjs and fonts
+  # from Google. The wss: directive must name the HiveMQ host
+  # exactly — update if you switch brokers.
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; connect-src 'self' https://api.github.com wss://*.hivemq.cloud:8884; img-src 'self' data:
+
+  # ── Cache: never cache the dashboard HTML ─────────────────
+  # (always fresh so new MQTT credentials take effect)
+  Cache-Control: no-cache, no-store, must-revalidate
