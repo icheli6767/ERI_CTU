@@ -10,7 +10,7 @@
 #        Build output dir : /
 #   4. Click Save and Deploy.
 
-name       = "eri-dashboard"
+name       = "4l-eri-ctu"
 pages_build_output_dir = "."
 
 # Compatibility flags — use the latest date you tested against.
