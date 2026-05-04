@@ -293,6 +293,8 @@ body {
 .modal-box {
   background: var(--surface); border: 1px solid var(--border-hi);
   padding: 28px; width: 440px; max-width: 95vw;
+  position: relative; z-index: 201;   /* always above the overlay */
+  pointer-events: auto !important;    /* never inherits pointer-events:none */
 }
 .modal-box h4 {
   font-family: var(--sans); font-size: .95rem; font-weight: 700;
@@ -350,7 +352,12 @@ body {
   </div>
 
   <!-- Admin login / logout -->
-  <button id="btn-admin-action" onclick="onAdminActionClick()">Login as Admin</button>
+  <button id="btn-admin-action" onclick="onAdminActionClick()"
+          style="background:var(--orange);color:#000;border:none;padding:6px 14px;
+                 font-family:var(--mono);font-size:.75rem;font-weight:600;
+                 letter-spacing:.08em;text-transform:uppercase;cursor:pointer;">
+    Login as Admin
+  </button>
 
   <div class="header-right">
     <span id="conf-text">—</span>
@@ -364,7 +371,7 @@ body {
 
 <!-- Viewer lockout notice -->
 <div id="viewer-banner" class="show">
-  🔒 &nbsp;Viewing in read-only mode. Log in as admin to change settings or export data.
+  🔒 &nbsp;Read-only mode. &nbsp;<strong style="cursor:pointer;text-decoration:underline" onclick="onAdminActionClick()">Click here or the Login button above</strong> to access admin controls. &nbsp;|&nbsp; <span style="cursor:pointer;opacity:.7;font-size:.65rem" onclick="if(confirm('Reset admin password? You will need to set a new one.')){localStorage.removeItem('eri_admin_hash');sessionStorage.removeItem('eri_session_admin');openModal('modal-setup')}">Forgot password?</span>
 </div>
 
 <!-- ════════════════════════════════════════════════════
@@ -529,6 +536,7 @@ body {
     <div class="field">
       <label>Admin Password</label>
       <input type="password" id="auth-password" placeholder="••••••••"
+             autocomplete="current-password"
              onkeydown="if(event.key==='Enter') attemptLogin()" />
     </div>
     <div class="modal-error" id="auth-error"></div>
@@ -544,22 +552,25 @@ body {
 ════════════════════════════════════════════════════ -->
 <div class="modal-overlay" id="modal-setup">
   <div class="modal-box">
-    <h4>Set Admin Password</h4>
+    <h4>Welcome — Set Admin Password</h4>
     <p class="modal-desc">
-      No admin password has been configured yet. Set one now to protect settings and data controls.
-      This password will be stored as a SHA-256 hash in this browser.
+      This is your first time opening the ERI dashboard.<br>
+      Set an admin password to unlock settings and data controls.
+      Viewers can always see the live data without logging in.
     </p>
     <div class="field">
       <label>New Admin Password</label>
-      <input type="password" id="setup-pass1" placeholder="Minimum 8 characters" />
+      <input type="password" id="setup-pass1" placeholder="Minimum 8 characters" autocomplete="new-password" />
     </div>
     <div class="field">
       <label>Confirm Password</label>
       <input type="password" id="setup-pass2" placeholder="Repeat password"
+             autocomplete="new-password"
              onkeydown="if(event.key==='Enter') commitSetup()" />
     </div>
     <div class="modal-error" id="setup-error"></div>
     <div class="modal-actions">
+      <button class="btn-modal" onclick="closeModal('modal-setup')">Continue as Viewer</button>
       <button class="btn-modal primary" onclick="commitSetup()">Set Password &amp; Login</button>
     </div>
   </div>
@@ -1240,10 +1251,11 @@ function updateSampleCounter() {
   loadGitHubIssues();
   setInterval(loadGitHubIssues, 5 * 60 * 1000);
 
-  // 5. Prompt admin to set up if first time and no MQTT host saved
-  if (!hasAdminPassword() && !loadSettings().host) {
-    // Small delay so the page finishes rendering first
-    setTimeout(() => openModal('modal-setup'), 600);
+  // 5. Show setup modal unconditionally if no admin password exists yet.
+  //    Removing the old && !host condition that caused it to silently
+  //    skip when any prior state was in localStorage.
+  if (!hasAdminPassword()) {
+    setTimeout(() => openModal('modal-setup'), 400);
   }
 })();
 </script>
