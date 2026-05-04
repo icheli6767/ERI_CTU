@@ -1,4 +1,4 @@
-# wrangler.toml — Cloudflare Pages (static site, no build step)
+wrangler.toml
 #
 # ── Dashboard setup (recommended) ─────────────────────────────
 #   1. Push this repo to GitHub.
