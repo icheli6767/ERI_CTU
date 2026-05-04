@@ -718,6 +718,7 @@ const mkChart = (id, dsets) => new Chart(
   document.getElementById(id).getContext('2d'), {
     type:'line', data:{ labels:[], datasets:dsets },
     options:{ responsive:true, maintainAspectRatio:false, animation:false,
+              spanGaps:true,
               plugins:{ legend:{display:false}, tooltip:{enabled:false} },
               scales:{ x:{display:false}, y:{ display:true,
                 ticks:{color:'#475569',font:{family:'JetBrains Mono',size:9},maxTicksLimit:3,callback:v=>v.toFixed(2)},
@@ -758,8 +759,69 @@ requestAnimationFrame(() => {
   [gAC,gVL,gDP,tAC,tVL,tDP,idrC].forEach(ch => ch.resize());
 });
 
+// ── Shared x-axis labels — all 6 floor charts reference this array ──
+// This guarantees both ground and top floors always show the same
+// time window and scroll together in lockstep.
+const sharedLabels = [];
+
+// Format a Unix-ms or millis() timestamp to HH:MM:SS
+function fmtTs(ts) {
+  // If ts looks like a Unix ms timestamp (> year 2000 = 946684800000)
+  // use it directly; otherwise it's millis() — show elapsed time instead.
+  if (ts > 946684800000) {
+    return new Date(ts).toLocaleTimeString('en-US', {hour12:false});
+  }
+  // millis() fallback: format as MM:SS.t elapsed
+  const s = Math.floor(ts / 1000);
+  const m = Math.floor(s / 60);
+  return String(m).padStart(2,'0') + ':' +
+         String(s % 60).padStart(2,'0') + '.' +
+         Math.floor((ts % 1000) / 100);
+}
+
+// Push data to one dataset of a chart (low-level, no label update)
+function pushData(ch, vals) {
+  ch.data.datasets.forEach((ds, i) => {
+    ds.data.push(vals[i]);
+    if (ds.data.length > MAXPTS) ds.data.shift();
+  });
+}
+
+// Pad a chart's datasets with null up to sharedLabels.length
+// so datasets never fall behind the shared label array.
+function padNulls(ch) {
+  const target = sharedLabels.length;
+  ch.data.datasets.forEach(ds => {
+    while (ds.data.length < target) {
+      ds.data.push(null);
+      if (ds.data.length > MAXPTS) ds.data.shift();
+    }
+  });
+}
+
+// Push one floor's sensor triple (accel, vel, disp) onto the shared timeline.
+// The opposite floor's charts receive null padding to keep lengths equal.
+function pushFloor(floor, ts, aVals, vVals, dVals) {
+  const lbl = fmtTs(ts);
+  sharedLabels.push(lbl);
+  if (sharedLabels.length > MAXPTS) sharedLabels.shift();
+
+  // Assign shared labels to all six floor charts
+  [gAC,gVL,gDP,tAC,tVL,tDP].forEach(ch => { ch.data.labels = sharedLabels; });
+
+  if (floor === 'ground') {
+    pushData(gAC, aVals); pushData(gVL, vVals); pushData(gDP, dVals);
+    padNulls(tAC);        padNulls(tVL);        padNulls(tDP);
+  } else {
+    pushData(tAC, aVals); pushData(tVL, vVals); pushData(tDP, dVals);
+    padNulls(gAC);        padNulls(gVL);        padNulls(gDP);
+  }
+  [gAC,gVL,gDP,tAC,tVL,tDP].forEach(ch => ch.update('none'));
+}
+
+// Legacy single-chart push (used for IDR chart only)
 function push(ch, ts, vals) {
-  const lbl = new Date(ts).toLocaleTimeString('en-US',{hour12:false});
+  const lbl = fmtTs(ts);
   ch.data.labels.push(lbl);
   vals.forEach((v,i) => ch.data.datasets[i].data.push(v));
   if (ch.data.labels.length > MAXPTS) {
@@ -805,8 +867,10 @@ async function loadHistory() {
   const [gs,ts,evs] = await Promise.all([
     dbLast('ground',MAXPTS), dbLast('top',MAXPTS), dbAll('events')
   ]);
-  gs.forEach(s => { push(gAC,s.ts,[s.ax,s.ay,s.az]); push(gVL,s.ts,[s.vx,s.vy,s.vz]); push(gDP,s.ts,[s.dx*1000,s.dy*1000,s.dz*1000]); });
-  ts.forEach(s => { push(tAC,s.ts,[s.ax,s.ay,s.az]); push(tVL,s.ts,[s.vx,s.vy,s.vz]); push(tDP,s.ts,[s.dx*1000,s.dy*1000,s.dz*1000]); });
+  gs.forEach(s => pushFloor('ground', s.ts,
+    [s.ax,s.ay,s.az], [s.vx,s.vy,s.vz], [s.dx*1000,s.dy*1000,s.dz*1000]));
+  ts.forEach(s => pushFloor('top', s.ts,
+    [s.ax,s.ay,s.az], [s.vx,s.vy,s.vz], [s.dx*1000,s.dy*1000,s.dz*1000]));
   S.gCnt = gs.length; S.tCnt = ts.length;
   evs.forEach(ev => addEvCard(ev));
   updateCtr();
@@ -853,13 +917,14 @@ function setConn(s) {
 //  MESSAGE HANDLERS
 // ══════════════════════════════════════════════════════════
 function handleFloor(fl, m) {
-  const aC = fl==='ground'?gAC:tAC, vC = fl==='ground'?gVL:tVL, dC = fl==='ground'?gDP:tDP;
-  push(aC,m.ts,[m.ax,m.ay,m.az]);
-  push(vC,m.ts,[m.vx,m.vy,m.vz]);
-  push(dC,m.ts,[m.dx*1000,m.dy*1000,m.dz*1000]);
+  pushFloor(fl, m.ts,
+    [m.ax, m.ay, m.az],
+    [m.vx, m.vy, m.vz],
+    [m.dx*1000, m.dy*1000, m.dz*1000]
+  );
   const te = document.getElementById(fl==='ground'?'g-temp':'t-temp');
   if (te) te.textContent = m.tc.toFixed(1);
-  dbAdd(fl,m);
+  dbAdd(fl, m);
   if (fl==='ground') S.gCnt++; else S.tCnt++;
   updateCtr();
 }
@@ -979,6 +1044,7 @@ function dl(content,name){
 async function clearDB() {
   if (!isAdmin()) return;
   if (!confirm('Clear ALL stored history? This cannot be undone.')) return;
+  sharedLabels.length = 0;   // reset shared x-axis
   ['ground','top','events'].forEach(s=>db.transaction(s,'readwrite').objectStore(s).clear());
   [gAC,gVL,gDP,tAC,tVL,tDP,idrC].forEach(c=>{
     c.data.labels=[];c.data.datasets.forEach(d=>d.data=[]);c.update('none');
