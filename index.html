@@ -9,27 +9,23 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
 <style>
-/* ══════════════════════════════════════════════════════════
-   BASE DESIGN: Dark seismology lab instrument panel.
-   ══════════════════════════════════════════════════════════ */
 :root {
-  --bg:          #090b0f;
-  --surface:     #0e1117;
-  --surface2:    #141820;
-  --border:      #1e2533;
-  --border-hi:   #2a3347;
-  --orange:      #f97316;
-  --orange-dim:  #7c3513;
-  --green:       #22c55e;
-  --yellow:      #eab308;
-  --red:         #ef4444;
-  --blue:        #38bdf8;
-  --text:        #cbd5e1;
-  --text-dim:    #475569;
-  --text-bright: #f1f5f9;
-  --mono:        'JetBrains Mono', monospace;
-  --sans:        'Syne', sans-serif;
-  --cx: #f97316; --cy: #38bdf8; --cz: #a78bfa;
+  --bg:        #090b0f;
+  --surface:   #0e1117;
+  --surface2:  #141820;
+  --border:    #1e2533;
+  --border-hi: #2a3347;
+  --orange:    #f97316;
+  --orange-d:  #7c3513;
+  --green:     #22c55e;
+  --yellow:    #eab308;
+  --red:       #ef4444;
+  --blue:      #38bdf8;
+  --text:      #cbd5e1;
+  --text-dim:  #475569;
+  --text-hi:   #f1f5f9;
+  --mono:      'JetBrains Mono', monospace;
+  --sans:      'Syne', sans-serif;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 13px; }
@@ -44,83 +40,80 @@ body {
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border-hi); }
 
-/* ── Header ─────────────────────────────────────────────── */
+/* ── Header ── */
 #header {
-  display: flex; align-items: center; gap: 16px;
-  padding: 14px 24px;
-  background: var(--surface);
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 12px 20px; background: var(--surface);
   border-bottom: 1px solid var(--border);
-  position: sticky; top: 0; z-index: 100;
+  position: sticky; top: 0; z-index: 50;
 }
 #header h1 {
-  font-family: var(--sans); font-size: 1.15rem; font-weight: 800;
+  font-family: var(--sans); font-size: 1.1rem; font-weight: 800;
   letter-spacing: .08em; color: var(--orange); text-transform: uppercase;
 }
 #header h1 span { color: var(--text-dim); font-weight: 400; }
 
-.conn-pill {
+.pill {
   display: flex; align-items: center; gap: 6px;
-  font-size: .75rem; letter-spacing: .06em;
-  padding: 4px 10px; border: 1px solid var(--border); text-transform: uppercase;
+  font-size: .72rem; letter-spacing: .06em; text-transform: uppercase;
+  padding: 4px 10px; border: 1px solid var(--border);
 }
-.conn-pill .dot {
+.pill .dot {
   width: 7px; height: 7px; border-radius: 50%;
   background: var(--text-dim); transition: background .3s;
 }
-.conn-pill.live .dot  { background: var(--green); box-shadow: 0 0 6px var(--green); }
-.conn-pill.error .dot { background: var(--red); }
+.pill.live .dot  { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.pill.err  .dot  { background: var(--red); }
 
-/* ── Role badge ─────────────────────────────────────────── */
-#role-badge {
-  display: flex; align-items: center; gap: 8px;
-  font-size: .7rem; letter-spacing: .1em; text-transform: uppercase;
-  padding: 5px 12px; border: 1px solid var(--border);
-  transition: border-color .3s, color .3s;
-}
-#role-badge.viewer { color: var(--text-dim); border-color: var(--border); }
-#role-badge.admin  { color: var(--orange);   border-color: var(--orange-dim); }
-#role-badge .role-icon { font-size: .9rem; }
+/* Role pill */
+#role-pill { font-size: .7rem; letter-spacing: .1em; padding: 4px 10px; border: 1px solid var(--border); text-transform: uppercase; }
+#role-pill.admin { color: var(--orange); border-color: var(--orange-d); }
+#role-pill.viewer { color: var(--text-dim); }
 
-#btn-admin-action {
+/* Always-visible login/logout + settings buttons */
+#btn-login    { margin-left: auto; }
+#btn-settings { }
+
+.hdr-btn {
   background: none; border: 1px solid var(--border-hi);
-  color: var(--text-dim); cursor: pointer; padding: 5px 10px;
-  font-family: var(--mono); font-size: .7rem; letter-spacing: .06em;
+  color: var(--text); cursor: pointer; padding: 6px 12px;
+  font-family: var(--mono); font-size: .72rem; letter-spacing: .06em;
   text-transform: uppercase; transition: border-color .2s, color .2s;
 }
-#btn-admin-action:hover { border-color: var(--orange); color: var(--orange); }
+.hdr-btn:hover { border-color: var(--orange); color: var(--orange); }
+.hdr-btn.primary { background: var(--orange); color: #000; border-color: var(--orange); font-weight: 700; }
+.hdr-btn.primary:hover { background: #ea6c0a; }
 
-.header-right {
-  margin-left: auto; display: flex; align-items: center; gap: 10px;
-}
 .status-badge {
   font-family: var(--sans); font-size: .85rem; font-weight: 700;
   padding: 5px 14px; border: 1px solid currentColor;
   letter-spacing: .1em; text-transform: uppercase;
-  transition: color .4s, border-color .4s; color: var(--text-dim);
+  color: var(--text-dim);
 }
 .status-badge.SAFE    { color: var(--green); }
 .status-badge.WARNING { color: var(--yellow); }
-.status-badge.UNSAFE  { color: var(--red); animation: pulse-red .8s ease infinite; }
-.status-badge.UNKNOWN { color: var(--text-dim); }
-@keyframes pulse-red { 0%,100%{opacity:1} 50%{opacity:.5} }
-#conf-text { font-size: .75rem; color: var(--text-dim); letter-spacing: .05em; }
+.status-badge.UNSAFE  { color: var(--red); animation: blink .8s ease infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
 
-/* ── Viewer lockout banner ───────────────────────────────── */
+/* ── Viewer banner ── */
 #viewer-banner {
-  display: none;
-  background: rgba(249,115,22,.06);
-  border-bottom: 1px solid var(--orange-dim);
-  padding: 8px 24px;
-  font-size: .7rem; letter-spacing: .08em; color: var(--orange);
-  text-align: center;
+  background: rgba(249,115,22,.07); border-bottom: 1px solid var(--orange-d);
+  padding: 8px 20px; font-size: .72rem; color: var(--text-dim);
+  display: flex; align-items: center; gap: 8px;
 }
-#viewer-banner.show { display: block; }
+#viewer-banner b { color: var(--orange); }
+/* hidden when admin */
+#viewer-banner.hidden-v { display: none; }
 
-/* ── Main grid ──────────────────────────────────────────── */
+/* ── Disabled button style (used instead of CSS pointer-events tricks) ── */
+button:disabled {
+  opacity: .3; cursor: not-allowed;
+}
+
+/* ── Main 3-col grid ── */
 #main {
   display: grid; grid-template-columns: 1fr 280px 1fr;
-  gap: 1px; background: var(--border);
-  border-bottom: 1px solid var(--border);
+  gap: 1px; background: var(--border); border-bottom: 1px solid var(--border);
 }
 .floor-panel {
   background: var(--surface); padding: 16px;
@@ -134,249 +127,198 @@ body {
 .floor-panel h2 em { color: var(--orange); font-style: normal; }
 .chart-block { display: flex; flex-direction: column; gap: 4px; }
 .chart-label {
-  font-size: .65rem; letter-spacing: .12em; text-transform: uppercase;
-  color: var(--text-dim);
+  font-size: .65rem; letter-spacing: .12em; text-transform: uppercase; color: var(--text-dim);
 }
-.chart-label .legend { float: right; display: flex; gap: 8px; }
-.legend-dot { font-size: .65rem; }
-.legend-dot::before { content: '■'; margin-right: 3px; }
-.legend-dot.x::before { color: var(--cx); }
-.legend-dot.y::before { color: var(--cy); }
-.legend-dot.z::before { color: var(--cz); }
-.chart-wrap {
-  height: 80px; position: relative;
-  border: 1px solid var(--border); background: var(--bg);
-}
-.chart-wrap canvas { display: block; width: 100% !important; height: 100% !important; }
-.floor-temp { font-size: .7rem; color: var(--text-dim); text-align: right; letter-spacing: .06em; }
-.floor-temp span { color: var(--text-bright); }
+.legend { float: right; display: flex; gap: 8px; }
+.ld { font-size: .65rem; }
+.ld::before { content: '■'; margin-right: 3px; }
+.ld.x::before { color: #f97316; } .ld.y::before { color: #38bdf8; } .ld.z::before { color: #a78bfa; }
+.cw { height: 80px; border: 1px solid var(--border); background: var(--bg); }
+.cw canvas { display: block; width: 100% !important; height: 100% !important; }
+.floor-temp { font-size: .7rem; color: var(--text-dim); text-align: right; }
+.floor-temp span { color: var(--text-hi); }
 
-/* ── Center panel ───────────────────────────────────────── */
-#center-panel {
+/* ── Center panel ── */
+#center {
   background: var(--surface2); padding: 16px;
   display: flex; flex-direction: column; gap: 14px;
 }
-#center-panel h2 {
+#center h2 {
   font-family: var(--sans); font-size: .8rem; font-weight: 700;
   letter-spacing: .14em; text-transform: uppercase; color: var(--text-dim);
   padding-bottom: 8px; border-bottom: 1px solid var(--border);
 }
-#conf-arc-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-#conf-arc-wrap svg { width: 120px; }
-#conf-arc-label {
+#arc-label {
   font-family: var(--sans); font-weight: 800; font-size: 1.6rem;
-  color: var(--text-bright); text-align: center;
+  color: var(--text-hi); text-align: center;
 }
-#conf-arc-sub { font-size: .65rem; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); text-align: center; }
+#arc-sub { font-size: .65rem; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); text-align: center; }
 .idr-row { display: flex; flex-direction: column; gap: 3px; }
-.idr-label { font-size: .65rem; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); display: flex; justify-content: space-between; }
-.idr-bar-track { height: 4px; background: var(--border); position: relative; overflow: hidden; }
-.idr-bar-fill { height: 100%; width: 0%; transition: width .4s ease, background .4s; background: var(--green); }
+.idr-lbl { font-size: .65rem; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); display: flex; justify-content: space-between; }
+.idr-track { height: 4px; background: var(--border); overflow: hidden; }
+.idr-fill { height: 100%; width: 0%; transition: width .4s, background .4s; background: var(--green); }
 .rel-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; text-align: center; }
 .rel-cell { background: var(--bg); padding: 6px 4px; border: 1px solid var(--border); }
-.rel-cell .axis { font-size: .6rem; color: var(--text-dim); letter-spacing: .1em; }
-.rel-cell .val  { font-size: .85rem; color: var(--text-bright); }
-.chart-wrap.idr-chart { height: 90px; }
+.rel-cell .ax { font-size: .6rem; color: var(--text-dim); }
+.rel-cell .vl { font-size: .85rem; color: var(--text-hi); }
+.cw.idr { height: 90px; }
 
-/* ── Sections ───────────────────────────────────────────── */
+/* ── Sections ── */
 .section { background: var(--surface); border-bottom: 1px solid var(--border); }
-.section-header {
+.sec-hdr {
   display: flex; align-items: center; gap: 12px;
-  padding: 12px 24px; border-bottom: 1px solid var(--border);
-  cursor: pointer; user-select: none;
+  padding: 12px 20px; border-bottom: 1px solid var(--border); cursor: pointer;
 }
-.section-header:hover { background: var(--surface2); }
-.section-header h3 {
-  font-family: var(--sans); font-size: .8rem; font-weight: 700;
-  letter-spacing: .14em; text-transform: uppercase; color: var(--text-dim); flex: 1;
-}
-.section-header .badge { font-size: .65rem; padding: 2px 8px; border: 1px solid var(--border-hi); letter-spacing: .08em; color: var(--text-dim); }
-.section-header .chevron { color: var(--text-dim); font-size: .8rem; transition: transform .2s; }
-.section-header.open .chevron { transform: rotate(180deg); }
-.section-body { display: none; padding: 16px 24px; }
-.section-body.open { display: block; }
+.sec-hdr:hover { background: var(--surface2); }
+.sec-hdr h3 { font-family: var(--sans); font-size: .8rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--text-dim); flex: 1; }
+.sec-hdr .bdg { font-size: .65rem; padding: 2px 8px; border: 1px solid var(--border-hi); color: var(--text-dim); }
+.sec-hdr .chv { color: var(--text-dim); transition: transform .2s; }
+.sec-hdr.open .chv { transform: rotate(180deg); }
+.sec-body { display: none; padding: 16px 20px; }
+.sec-body.open { display: block; }
 
-/* ── Event cards ────────────────────────────────────────── */
-#events-list { display: flex; flex-direction: column; gap: 8px; }
-.event-card { border: 1px solid var(--border); background: var(--surface2); overflow: hidden; }
-.event-card-header {
-  display: flex; align-items: center; gap: 12px;
-  padding: 8px 12px; cursor: pointer; transition: background .2s;
-}
-.event-card-header:hover { background: var(--bg); }
-.event-card-header .ev-time { font-size: .75rem; color: var(--text-dim); }
-.event-card-header .ev-idr  { color: var(--red); font-weight: 600; font-size: .75rem; }
-.event-card-header .ev-dur  { color: var(--text-dim); font-size: .75rem; margin-left: auto; }
-.event-card-body { display: none; padding: 10px 12px; border-top: 1px solid var(--border); }
-.event-card-body.open { display: block; }
-.event-chart-wrap { height: 80px; background: var(--bg); border: 1px solid var(--border); }
-#no-events { font-size: .75rem; color: var(--text-dim); text-align: center; padding: 24px; letter-spacing: .06em; }
+/* ── Event cards ── */
+#ev-list { display: flex; flex-direction: column; gap: 8px; }
+.ev-card { border: 1px solid var(--border); background: var(--surface2); overflow: hidden; }
+.ev-hdr { display: flex; align-items: center; gap: 12px; padding: 8px 12px; cursor: pointer; }
+.ev-hdr:hover { background: var(--bg); }
+.ev-hdr .et { font-size: .75rem; color: var(--text-dim); }
+.ev-hdr .ei { color: var(--red); font-weight: 600; font-size: .75rem; }
+.ev-hdr .ed { color: var(--text-dim); font-size: .75rem; margin-left: auto; }
+.ev-body { display: none; padding: 10px 12px; border-top: 1px solid var(--border); }
+.ev-body.open { display: block; }
+.ev-cw { height: 80px; background: var(--bg); border: 1px solid var(--border); }
+#no-ev { font-size: .75rem; color: var(--text-dim); text-align: center; padding: 24px; }
 
-/* ── GitHub issues ──────────────────────────────────────── */
-#gh-issues-list { display: flex; flex-direction: column; gap: 6px; }
-.gh-issue {
-  display: flex; align-items: flex-start; gap: 12px;
-  padding: 10px 12px; background: var(--surface2);
-  border: 1px solid var(--border); border-left: 3px solid var(--orange-dim);
+/* ── GitHub issues ── */
+#gh-list { display: flex; flex-direction: column; gap: 6px; }
+.gh-iss {
+  display: flex; align-items: flex-start; gap: 12px; padding: 10px 12px;
+  background: var(--surface2); border: 1px solid var(--border); border-left: 3px solid var(--orange-d);
   transition: border-left-color .2s;
 }
-.gh-issue:hover { border-left-color: var(--orange); }
-.gh-issue.open-issue   { border-left-color: var(--red); }
-.gh-issue.closed-issue { border-left-color: var(--green); }
-.gh-issue .gh-num   { font-size: .65rem; color: var(--text-dim); min-width: 36px; }
-.gh-issue .gh-title { font-size: .75rem; color: var(--text-bright); flex: 1; }
-.gh-issue .gh-title a { color: inherit; text-decoration: none; }
-.gh-issue .gh-title a:hover { color: var(--orange); }
-.gh-issue .gh-meta { font-size: .65rem; color: var(--text-dim); white-space: nowrap; }
-.gh-state { font-size: .6rem; padding: 2px 6px; border: 1px solid; text-transform: uppercase; letter-spacing: .06em; }
-.gh-state.open   { color: var(--red);   border-color: var(--red); }
-.gh-state.closed { color: var(--green); border-color: var(--green); }
-#gh-error, #gh-loading { font-size: .75rem; color: var(--text-dim); text-align: center; padding: 16px; }
+.gh-iss:hover { border-left-color: var(--orange); }
+.gh-iss.open-issue   { border-left-color: var(--red); }
+.gh-iss.closed-issue { border-left-color: var(--green); }
+.gh-iss .gn { font-size: .65rem; color: var(--text-dim); min-width: 36px; }
+.gh-iss .gt { font-size: .75rem; color: var(--text-hi); flex: 1; }
+.gh-iss .gt a { color: inherit; text-decoration: none; }
+.gh-iss .gt a:hover { color: var(--orange); }
+.gh-iss .gm { font-size: .65rem; color: var(--text-dim); white-space: nowrap; }
+.gs { font-size: .6rem; padding: 2px 6px; border: 1px solid; text-transform: uppercase; }
+.gs.open   { color: var(--red);   border-color: var(--red); }
+.gs.closed { color: var(--green); border-color: var(--green); }
 
-/* ── Export bar ─────────────────────────────────────────── */
+/* ── Export bar ── */
 #export-bar {
   background: var(--surface); border-bottom: 1px solid var(--border);
-  padding: 12px 24px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  position: relative;
+  padding: 12px 20px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
 }
-#export-bar label { font-size: .65rem; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); margin-right: 4px; }
-.btn-export {
+#export-bar label { font-size: .65rem; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); }
+.btn-x {
   background: none; border: 1px solid var(--border-hi); color: var(--text);
   cursor: pointer; padding: 6px 14px; font-family: var(--mono); font-size: .72rem;
-  letter-spacing: .06em; text-transform: uppercase; transition: border-color .2s, color .2s, opacity .2s;
+  letter-spacing: .06em; text-transform: uppercase; transition: border-color .2s, color .2s;
 }
-.btn-export:hover:not(:disabled) { border-color: var(--orange); color: var(--orange); }
-.btn-export.primary { border-color: var(--orange-dim); color: var(--orange); }
-.btn-export.primary:hover:not(:disabled) { border-color: var(--orange); background: rgba(249,115,22,.08); }
+.btn-x:hover:not(:disabled) { border-color: var(--orange); color: var(--orange); }
+.btn-x.primary { border-color: var(--orange-d); color: var(--orange); }
+.btn-x.primary:hover:not(:disabled) { border-color: var(--orange); background: rgba(249,115,22,.08); }
+.btn-x.danger  { border-color: #7f1d1d; color: var(--red); margin-left: auto; }
 
-/* ── LOCKED state for admin-only controls ───────────────── */
-.admin-only { position: relative; }
-.admin-only.locked {
-  opacity: .35; pointer-events: none; cursor: not-allowed;
-}
-.admin-only.locked::after {
-  content: '🔒'; position: absolute;
-  top: 50%; left: 50%; transform: translate(-50%,-50%);
-  font-size: 1rem; pointer-events: none;
-}
-/* Settings button locked variant */
-#btn-settings-wrap.locked #btn-settings {
-  opacity: .35; cursor: not-allowed; pointer-events: none;
-}
-#btn-settings-wrap { position: relative; }
-#btn-settings-wrap.locked::after {
-  content: ''; position: absolute; inset: 0; cursor: not-allowed;
-}
-#btn-settings {
-  background: none; border: 1px solid var(--border);
-  color: var(--text-dim); cursor: pointer; padding: 5px 10px;
-  font-family: var(--mono); font-size: .75rem; transition: border-color .2s, color .2s;
-}
-#btn-settings:hover { border-color: var(--orange); color: var(--orange); }
-
-/* ── Footer ─────────────────────────────────────────────── */
+/* ── Footer ── */
 #footer {
-  padding: 10px 24px; background: var(--bg); border-top: 1px solid var(--border);
-  display: flex; align-items: center; gap: 16px;
+  padding: 10px 20px; background: var(--bg); border-top: 1px solid var(--border);
+  display: flex; gap: 16px; align-items: center;
 }
-#footer span { font-size: .65rem; color: var(--text-dim); letter-spacing: .06em; }
-#sample-counter { margin-left: auto; }
+#footer span { font-size: .65rem; color: var(--text-dim); }
+#s-counter { margin-left: auto; }
 
-/* ══════════════════════════════════════════════════════════
-   MODALS  — shared base styles
-   ══════════════════════════════════════════════════════════ */
-.modal-overlay {
-  display: none; position: fixed; inset: 0; z-index: 200;
-  background: rgba(0,0,0,.8); align-items: center; justify-content: center;
+/* ══════════════════════════════════════════════
+   MODALS — simple, high-z, always interactive
+   ══════════════════════════════════════════════ */
+.overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 9000;
+  background: rgba(0,0,0,.82);
+  align-items: center; justify-content: center;
+  /* The overlay itself never blocks child interaction: */
+  pointer-events: auto;
 }
-.modal-overlay.open { display: flex; }
-.modal-box {
-  background: var(--surface); border: 1px solid var(--border-hi);
-  padding: 28px; width: 440px; max-width: 95vw;
-  position: relative; z-index: 201;   /* always above the overlay */
-  pointer-events: auto !important;    /* never inherits pointer-events:none */
+.overlay.open { display: flex; }
+
+.mbox {
+  background: var(--surface);
+  border: 1px solid var(--border-hi);
+  padding: 28px; width: 460px; max-width: 94vw;
+  /* Ensure the box itself is always on top and interactive */
+  position: relative; z-index: 9001;
+  pointer-events: auto;
 }
-.modal-box h4 {
+.mbox h4 {
   font-family: var(--sans); font-size: .95rem; font-weight: 700;
   letter-spacing: .1em; text-transform: uppercase; margin-bottom: 6px;
 }
-.modal-box p.modal-desc { font-size: .72rem; color: var(--text-dim); margin-bottom: 18px; line-height: 1.6; }
+.mbox .mdesc { font-size: .72rem; color: var(--text-dim); margin-bottom: 18px; line-height: 1.7; }
 .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
 .field label { font-size: .65rem; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); }
 .field input {
   background: var(--bg); border: 1px solid var(--border-hi);
-  color: var(--text-bright); font-family: var(--mono); font-size: .8rem;
-  padding: 7px 10px; outline: none; transition: border-color .2s;
+  color: var(--text-hi); font-family: var(--mono); font-size: .82rem;
+  padding: 8px 10px; outline: none; transition: border-color .2s;
+  /* Make sure inputs are always interactive */
+  pointer-events: auto; position: relative; z-index: 9002;
 }
 .field input:focus { border-color: var(--orange); }
-.field input:disabled { opacity: .4; cursor: not-allowed; }
-.modal-actions { display: flex; gap: 8px; margin-top: 18px; }
-.btn-modal {
+.mactions { display: flex; gap: 8px; margin-top: 18px; }
+.mbtn {
   flex: 1; padding: 9px; font-family: var(--mono); font-size: .75rem;
   letter-spacing: .06em; text-transform: uppercase; cursor: pointer;
   border: 1px solid var(--border-hi); background: none; color: var(--text);
   transition: border-color .2s, color .2s;
+  /* Always interactive */
+  pointer-events: auto; position: relative; z-index: 9002;
 }
-.btn-modal.primary { background: var(--orange); color: #000; border-color: var(--orange); font-weight: 600; }
-.btn-modal.danger  { border-color: var(--red); color: var(--red); }
-.btn-modal:not(.primary):not(.danger):hover { border-color: var(--orange); color: var(--orange); }
-.modal-error { font-size: .7rem; color: var(--red); margin-top: 8px; min-height: 18px; letter-spacing: .04em; }
-.modal-divider { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
-.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mbtn.primary { background: var(--orange); color: #000; border-color: var(--orange); font-weight: 700; }
+.mbtn.primary:hover { background: #ea6c0a; }
+.mbtn:not(.primary):hover { border-color: var(--orange); color: var(--orange); }
+.merr { font-size: .7rem; color: var(--red); margin-top: 6px; min-height: 16px; }
+.mhr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+.frow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
-/* ── Auth modal accent ──────────────────────────────────── */
-#modal-auth h4    { color: var(--orange); }
-#modal-setup h4   { color: var(--yellow); }
-#modal-settings h4 { color: var(--blue); }
-
-.hidden { display: none !important; }
+/* Modal color accents */
+#m-setup h4    { color: var(--yellow); }
+#m-login h4    { color: var(--orange); }
+#m-settings h4 { color: var(--blue); }
 </style>
 </head>
 <body>
 
-<!-- ════════════════════════════════════════════════════
-     HEADER
-════════════════════════════════════════════════════ -->
+<!-- ══════════════ HEADER ══════════════ -->
 <header id="header">
   <h1>ERI <span>// Seismic Monitor</span></h1>
 
-  <div id="conn-pill" class="conn-pill">
+  <div id="conn-pill" class="pill">
     <div class="dot"></div>
-    <span id="conn-label">DISCONNECTED</span>
+    <span id="conn-lbl">DISCONNECTED</span>
   </div>
 
-  <!-- Role badge -->
-  <div id="role-badge" class="viewer">
-    <span class="role-icon" id="role-icon">🔒</span>
-    <span id="role-label">VIEWER</span>
-  </div>
+  <div id="role-pill" class="viewer">🔒 VIEWER</div>
 
-  <!-- Admin login / logout -->
-  <button id="btn-admin-action" onclick="onAdminActionClick()"
-          style="background:var(--orange);color:#000;border:none;padding:6px 14px;
-                 font-family:var(--mono);font-size:.75rem;font-weight:600;
-                 letter-spacing:.08em;text-transform:uppercase;cursor:pointer;">
-    Login as Admin
-  </button>
+  <div id="status-badge" class="status-badge UNKNOWN">UNKNOWN</div>
+  <span id="conf-txt" style="font-size:.72rem;color:var(--text-dim)">—</span>
 
-  <div class="header-right">
-    <span id="conf-text">—</span>
-    <div id="status-badge" class="status-badge UNKNOWN">UNKNOWN</div>
-    <!-- Settings — admin only -->
-    <div id="btn-settings-wrap" class="locked">
-      <button id="btn-settings" onclick="openSettings()">⚙ Settings</button>
-    </div>
-  </div>
+  <!-- These two buttons are ALWAYS fully interactive — no locking applied -->
+  <button class="hdr-btn primary" id="btn-login" onclick="onLoginClick()">Login as Admin</button>
+  <button class="hdr-btn" id="btn-settings" onclick="onSettingsClick()">⚙ Settings</button>
 </header>
 
-<!-- Viewer lockout notice -->
-<div id="viewer-banner" class="show">
-  🔒 &nbsp;Read-only mode. &nbsp;<strong style="cursor:pointer;text-decoration:underline" onclick="onAdminActionClick()">Click here or the Login button above</strong> to access admin controls. &nbsp;|&nbsp; <span style="cursor:pointer;opacity:.7;font-size:.65rem" onclick="if(confirm('Reset admin password? You will need to set a new one.')){localStorage.removeItem('eri_admin_hash');sessionStorage.removeItem('eri_session_admin');openModal('modal-setup')}">Forgot password?</span>
+<!-- ══════════════ VIEWER BANNER ══════════════ -->
+<div id="viewer-banner">
+  🔒 <b>Read-only mode.</b>
+  Charts and event log are fully visible. Log in as Admin (button above) to unlock settings, export, and data controls.
 </div>
 
-<!-- ════════════════════════════════════════════════════
-     MAIN 3-COLUMN GRID
-════════════════════════════════════════════════════ -->
+<!-- ══════════════ MAIN GRID ══════════════ -->
 <div id="main">
 
   <!-- Ground Floor -->
@@ -384,63 +326,62 @@ body {
     <h2><em>●</em> Ground Floor</h2>
     <div class="chart-block">
       <div class="chart-label">Acceleration (g)
-        <span class="legend">
-          <span class="legend-dot x">X</span>
-          <span class="legend-dot y">Y</span>
-          <span class="legend-dot z">Z</span>
-        </span>
+        <span class="legend"><span class="ld x">X</span><span class="ld y">Y</span><span class="ld z">Z</span></span>
       </div>
-      <div class="chart-wrap"><canvas id="g-accel"></canvas></div>
+      <div class="cw"><canvas id="g-ac"></canvas></div>
     </div>
     <div class="chart-block">
       <div class="chart-label">Velocity (m/s)</div>
-      <div class="chart-wrap"><canvas id="g-vel"></canvas></div>
+      <div class="cw"><canvas id="g-vl"></canvas></div>
     </div>
     <div class="chart-block">
       <div class="chart-label">Displacement (mm)</div>
-      <div class="chart-wrap"><canvas id="g-disp"></canvas></div>
+      <div class="cw"><canvas id="g-dp"></canvas></div>
     </div>
     <div class="floor-temp">Board Temp: <span id="g-temp">—</span> °C</div>
   </div>
 
-  <!-- Center: Status + IDR -->
-  <div id="center-panel">
+  <!-- Center: Status -->
+  <div id="center">
     <h2>Structural Status</h2>
-    <div id="conf-arc-wrap">
-      <svg viewBox="0 0 120 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+      <svg viewBox="0 0 120 70" width="120" fill="none">
         <path d="M10 65 A50 50 0 0 1 110 65" stroke="#1e2533" stroke-width="8" stroke-linecap="round"/>
-        <path id="arc-fill" d="M10 65 A50 50 0 0 1 110 65"
-              stroke="#22c55e" stroke-width="8" stroke-linecap="round"
-              stroke-dasharray="157" stroke-dashoffset="157"
-              style="transition: stroke-dashoffset .5s ease, stroke .4s"/>
+        <path id="arc" d="M10 65 A50 50 0 0 1 110 65" stroke="#22c55e" stroke-width="8"
+              stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="157"
+              style="transition:stroke-dashoffset .5s,stroke .4s"/>
       </svg>
-      <div id="conf-arc-label">—</div>
-      <div id="conf-arc-sub">Confidence</div>
+      <div id="arc-label">—</div>
+      <div id="arc-sub">Confidence</div>
     </div>
+
     <div>
       <div style="font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px">Inter-Story Drift Ratio</div>
       <div style="display:flex;flex-direction:column;gap:8px">
-        <div class="idr-row"><div class="idr-label"><span>X-axis</span><span id="idr-x-val">0.000%</span></div><div class="idr-bar-track"><div class="idr-bar-fill" id="idr-x-bar"></div></div></div>
-        <div class="idr-row"><div class="idr-label"><span>Y-axis</span><span id="idr-y-val">0.000%</span></div><div class="idr-bar-track"><div class="idr-bar-fill" id="idr-y-bar"></div></div></div>
-        <div class="idr-row"><div class="idr-label"><span>Z-axis</span><span id="idr-z-val">0.000%</span></div><div class="idr-bar-track"><div class="idr-bar-fill" id="idr-z-bar"></div></div></div>
+        <div class="idr-row"><div class="idr-lbl"><span>X</span><span id="ix-v">0.000%</span></div><div class="idr-track"><div class="idr-fill" id="ix-b"></div></div></div>
+        <div class="idr-row"><div class="idr-lbl"><span>Y</span><span id="iy-v">0.000%</span></div><div class="idr-track"><div class="idr-fill" id="iy-b"></div></div></div>
+        <div class="idr-row"><div class="idr-lbl"><span>Z</span><span id="iz-v">0.000%</span></div><div class="idr-track"><div class="idr-fill" id="iz-b"></div></div></div>
       </div>
     </div>
+
     <div>
       <div style="font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:6px">Relative Displacement (mm)</div>
       <div class="rel-row">
-        <div class="rel-cell"><div class="axis">X</div><div class="val" id="rel-dx">—</div></div>
-        <div class="rel-cell"><div class="axis">Y</div><div class="val" id="rel-dy">—</div></div>
-        <div class="rel-cell"><div class="axis">Z</div><div class="val" id="rel-dz">—</div></div>
+        <div class="rel-cell"><div class="ax">X</div><div class="vl" id="rdx">—</div></div>
+        <div class="rel-cell"><div class="ax">Y</div><div class="vl" id="rdy">—</div></div>
+        <div class="rel-cell"><div class="ax">Z</div><div class="vl" id="rdz">—</div></div>
       </div>
     </div>
+
     <div class="chart-block">
       <div class="chart-label">Max IDR over time (%)</div>
-      <div class="chart-wrap idr-chart"><canvas id="idr-chart"></canvas></div>
+      <div class="cw idr"><canvas id="idr-c"></canvas></div>
     </div>
-    <div style="font-size:.6rem;color:var(--text-dim);line-height:1.8">
-      <div style="color:var(--green)">● SAFE     &lt; 0.5%</div>
-      <div style="color:var(--yellow)">● WARNING  0.5 – 1.0%</div>
-      <div style="color:var(--red)">● UNSAFE   &gt; 1.0%</div>
+
+    <div style="font-size:.6rem;color:var(--text-dim);line-height:2">
+      <div style="color:var(--green)">● SAFE &lt; 0.5%</div>
+      <div style="color:var(--yellow)">● WARNING 0.5–1.0%</div>
+      <div style="color:var(--red)">● UNSAFE &gt; 1.0%</div>
     </div>
   </div>
 
@@ -449,72 +390,60 @@ body {
     <h2><em>●</em> Top Floor</h2>
     <div class="chart-block">
       <div class="chart-label">Acceleration (g)
-        <span class="legend">
-          <span class="legend-dot x">X</span>
-          <span class="legend-dot y">Y</span>
-          <span class="legend-dot z">Z</span>
-        </span>
+        <span class="legend"><span class="ld x">X</span><span class="ld y">Y</span><span class="ld z">Z</span></span>
       </div>
-      <div class="chart-wrap"><canvas id="t-accel"></canvas></div>
+      <div class="cw"><canvas id="t-ac"></canvas></div>
     </div>
     <div class="chart-block">
       <div class="chart-label">Velocity (m/s)</div>
-      <div class="chart-wrap"><canvas id="t-vel"></canvas></div>
+      <div class="cw"><canvas id="t-vl"></canvas></div>
     </div>
     <div class="chart-block">
       <div class="chart-label">Displacement (mm)</div>
-      <div class="chart-wrap"><canvas id="t-disp"></canvas></div>
+      <div class="cw"><canvas id="t-dp"></canvas></div>
     </div>
     <div class="floor-temp">Board Temp: <span id="t-temp">—</span> °C</div>
   </div>
 
 </div><!-- /#main -->
 
-<!-- ════════════════════════════════════════════════════
-     EXPORT BAR — admin-only controls are locked for viewers
-════════════════════════════════════════════════════ -->
+<!-- ══════════════ EXPORT BAR ══════════════ -->
 <div id="export-bar">
   <label>Export CSV:</label>
-  <button class="btn-export admin-only locked" id="btn-exp-ground" onclick="exportCSV('ground')">Ground Floor</button>
-  <button class="btn-export admin-only locked" id="btn-exp-top"    onclick="exportCSV('top')">Top Floor</button>
-  <button class="btn-export admin-only locked" id="btn-exp-events" onclick="exportCSV('events')">Unsafe Events</button>
-  <button class="btn-export primary admin-only locked" id="btn-exp-all" onclick="exportCSV('all')">Export All</button>
-  <button class="btn-export admin-only locked" id="btn-clear" style="margin-left:auto;border-color:#7f1d1d;color:#ef4444" onclick="clearDB()">⚠ Clear History</button>
+  <button class="btn-x" id="bx-g" onclick="exportCSV('ground')" disabled>Ground Floor</button>
+  <button class="btn-x" id="bx-t" onclick="exportCSV('top')"    disabled>Top Floor</button>
+  <button class="btn-x" id="bx-e" onclick="exportCSV('events')" disabled>Unsafe Events</button>
+  <button class="btn-x primary" id="bx-a" onclick="exportCSV('all')" disabled>Export All</button>
+  <button class="btn-x danger"   id="bx-c" onclick="clearDB()"       disabled>⚠ Clear History</button>
 </div>
 
-<!-- ════════════════════════════════════════════════════
-     UNSAFE EVENT LOG
-════════════════════════════════════════════════════ -->
+<!-- ══════════════ EVENT LOG ══════════════ -->
 <div class="section">
-  <div class="section-header" onclick="toggleSection(this)">
+  <div class="sec-hdr" onclick="toggleSec(this)">
     <h3>Unsafe Event Log</h3>
-    <div class="badge" id="events-count-badge">0 events</div>
-    <span class="chevron">▾</span>
+    <div class="bdg" id="ev-badge">0 events</div>
+    <span class="chv">▾</span>
   </div>
-  <div class="section-body">
-    <div id="events-list">
-      <div id="no-events">No unsafe events recorded in this session.</div>
-    </div>
+  <div class="sec-body">
+    <div id="ev-list"><div id="no-ev">No unsafe events recorded yet.</div></div>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════
-     GITHUB ISSUES
-════════════════════════════════════════════════════ -->
+<!-- ══════════════ GITHUB ISSUES ══════════════ -->
 <div class="section">
-  <div class="section-header" onclick="toggleSection(this)">
+  <div class="sec-hdr" onclick="toggleSec(this)">
     <h3>GitHub Issue Reports</h3>
-    <div class="badge" id="gh-count-badge">—</div>
-    <span class="chevron">▾</span>
+    <div class="bdg" id="gh-badge">—</div>
+    <span class="chv">▾</span>
   </div>
-  <div class="section-body">
-    <div id="gh-loading">Loading issues…</div>
-    <div id="gh-error" class="hidden"></div>
-    <div id="gh-issues-list" class="hidden"></div>
-    <div id="gh-footer" class="hidden" style="margin-top:10px;font-size:.65rem;color:var(--text-dim)">
+  <div class="sec-body">
+    <div id="gh-load">Loading issues…</div>
+    <div id="gh-err"  style="display:none;font-size:.75rem;color:var(--text-dim);padding:8px"></div>
+    <div id="gh-list" style="display:none"></div>
+    <div id="gh-foot" style="display:none;margin-top:10px;font-size:.65rem;color:var(--text-dim)">
       Issues labelled <code>unsafe-event</code> from
-      <a id="gh-repo-link" href="#" target="_blank" style="color:var(--orange)"></a>
-      — <button class="btn-export" style="padding:3px 8px" onclick="loadGitHubIssues()">↻ Refresh</button>
+      <a id="gh-link" href="#" target="_blank" style="color:var(--orange)"></a>
+      — <button class="btn-x" style="padding:3px 8px" onclick="loadIssues()">↻ Refresh</button>
     </div>
   </div>
 </div>
@@ -522,740 +451,584 @@ body {
 <!-- Footer -->
 <div id="footer">
   <span>ERI Seismic Monitor v1.0</span>
-  <span id="last-msg-time">Last message: —</span>
-  <span id="sample-counter" style="margin-left:auto">Ground: 0 | Top: 0 samples</span>
+  <span id="last-rx">Last message: —</span>
+  <span id="s-counter">Ground: 0 | Top: 0 samples</span>
 </div>
 
-<!-- ════════════════════════════════════════════════════
-     MODAL 1: ADMIN LOGIN
-════════════════════════════════════════════════════ -->
-<div class="modal-overlay" id="modal-auth">
-  <div class="modal-box">
-    <h4>Admin Login</h4>
-    <p class="modal-desc">Enter the admin password to unlock settings, export, and data management controls.</p>
-    <div class="field">
-      <label>Admin Password</label>
-      <input type="password" id="auth-password" placeholder="••••••••"
-             autocomplete="current-password"
-             onkeydown="if(event.key==='Enter') attemptLogin()" />
-    </div>
-    <div class="modal-error" id="auth-error"></div>
-    <div class="modal-actions">
-      <button class="btn-modal" onclick="closeModal('modal-auth')">Cancel</button>
-      <button class="btn-modal primary" onclick="attemptLogin()">Login</button>
-    </div>
-  </div>
-</div>
-
-<!-- ════════════════════════════════════════════════════
-     MODAL 2: FIRST-TIME ADMIN SETUP
-════════════════════════════════════════════════════ -->
-<div class="modal-overlay" id="modal-setup">
-  <div class="modal-box">
+<!-- ══════════════════════════════════════════
+     MODAL: FIRST-TIME SETUP
+══════════════════════════════════════════ -->
+<div class="overlay" id="m-setup">
+  <div class="mbox">
     <h4>Welcome — Set Admin Password</h4>
-    <p class="modal-desc">
-      This is your first time opening the ERI dashboard.<br>
-      Set an admin password to unlock settings and data controls.
-      Viewers can always see the live data without logging in.
+    <p class="mdesc">
+      First time here! Set an admin password to protect settings and data controls.<br>
+      Anyone can view the live dashboard without logging in.
     </p>
     <div class="field">
-      <label>New Admin Password</label>
-      <input type="password" id="setup-pass1" placeholder="Minimum 8 characters" autocomplete="new-password" />
+      <label>New Password (min 8 characters)</label>
+      <input type="password" id="sp1" autocomplete="new-password" placeholder="Enter password" />
     </div>
     <div class="field">
       <label>Confirm Password</label>
-      <input type="password" id="setup-pass2" placeholder="Repeat password"
-             autocomplete="new-password"
-             onkeydown="if(event.key==='Enter') commitSetup()" />
+      <input type="password" id="sp2" autocomplete="new-password" placeholder="Repeat password"
+             onkeydown="if(event.key==='Enter')doSetup()" />
     </div>
-    <div class="modal-error" id="setup-error"></div>
-    <div class="modal-actions">
-      <button class="btn-modal" onclick="closeModal('modal-setup')">Continue as Viewer</button>
-      <button class="btn-modal primary" onclick="commitSetup()">Set Password &amp; Login</button>
+    <div class="merr" id="s-err"></div>
+    <div class="mactions">
+      <button class="mbtn" onclick="closeM('m-setup')">Continue as Viewer</button>
+      <button class="mbtn primary" onclick="doSetup()">Set Password &amp; Login</button>
     </div>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════
-     MODAL 3: SETTINGS (admin only)
-════════════════════════════════════════════════════ -->
-<div class="modal-overlay" id="modal-settings">
-  <div class="modal-box">
-    <h4>Connection Settings</h4>
+<!-- ══════════════════════════════════════════
+     MODAL: LOGIN
+══════════════════════════════════════════ -->
+<div class="overlay" id="m-login">
+  <div class="mbox">
+    <h4>Admin Login</h4>
+    <p class="mdesc">Enter your admin password to unlock settings and data controls.</p>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="lp" autocomplete="current-password" placeholder="••••••••"
+             onkeydown="if(event.key==='Enter')doLogin()" />
+    </div>
+    <div class="merr" id="l-err"></div>
+    <p style="font-size:.65rem;color:var(--text-dim);margin-top:6px;cursor:pointer"
+       onclick="if(confirm('This will clear the stored password hash. You will need to set a new one.'))
+                {localStorage.removeItem('eri_h');sessionStorage.removeItem('eri_s');
+                 closeM('m-login');openM('m-setup')}">
+      Forgot password? (reset)
+    </p>
+    <div class="mactions">
+      <button class="mbtn" onclick="closeM('m-login')">Cancel</button>
+      <button class="mbtn primary" onclick="doLogin()">Login</button>
+    </div>
+  </div>
+</div>
 
+<!-- ══════════════════════════════════════════
+     MODAL: SETTINGS (admin only)
+══════════════════════════════════════════ -->
+<div class="overlay" id="m-settings">
+  <div class="mbox">
+    <h4>Connection Settings</h4>
     <div class="field">
       <label>HiveMQ Host</label>
-      <input type="text" id="cfg-host" placeholder="xxxx.s1.eu.hivemq.cloud" />
+      <input type="text" id="c-host" placeholder="xxxx.s1.eu.hivemq.cloud" autocomplete="off" />
     </div>
-    <div class="field-row">
-      <div class="field">
-        <label>WSS Port</label>
-        <input type="number" id="cfg-port" value="8884" />
-      </div>
-      <div class="field">
-        <label>Client ID</label>
-        <input type="text" id="cfg-clientid" placeholder="eri-dash-01" />
-      </div>
+    <div class="frow">
+      <div class="field"><label>WSS Port</label><input type="number" id="c-port" value="8884" /></div>
+      <div class="field"><label>Client ID</label><input type="text" id="c-cid" placeholder="eri-dash-01" autocomplete="off" /></div>
     </div>
-    <div class="field">
-      <label>MQTT Username</label>
-      <input type="text" id="cfg-user" placeholder="eridisplacement" />
-    </div>
-    <div class="field">
-      <label>MQTT Password</label>
-      <input type="password" id="cfg-pass" />
-    </div>
-
-    <hr class="modal-divider" />
-
-    <div class="field">
-      <label>GitHub Owner</label>
-      <input type="text" id="cfg-gh-owner" placeholder="your-github-username" />
-    </div>
-    <div class="field">
-      <label>GitHub Repo</label>
-      <input type="text" id="cfg-gh-repo" placeholder="eri-seismic-log" />
-    </div>
-    <p style="font-size:.65rem;color:var(--text-dim);margin-top:-6px;margin-bottom:12px">Repo must be public for unauthenticated issue reads.</p>
-
-    <hr class="modal-divider" />
-
-    <!-- Change admin password (admin only — in settings modal) -->
+    <div class="field"><label>MQTT Username</label><input type="text" id="c-user" autocomplete="off" /></div>
+    <div class="field"><label>MQTT Password</label><input type="password" id="c-pass" autocomplete="off" /></div>
+    <hr class="mhr">
+    <div class="field"><label>GitHub Owner</label><input type="text" id="c-gho" placeholder="your-username" autocomplete="off" /></div>
+    <div class="field"><label>GitHub Repo</label><input type="text" id="c-ghr" placeholder="eri-seismic-log" autocomplete="off" /></div>
+    <p style="font-size:.65rem;color:var(--text-dim);margin-top:-6px">Repo must be public for issue reads.</p>
+    <hr class="mhr">
     <div style="font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px">Change Admin Password</div>
-    <div class="field-row">
-      <div class="field">
-        <label>New Password</label>
-        <input type="password" id="cfg-new-pass" placeholder="Leave blank to keep" />
-      </div>
-      <div class="field">
-        <label>Confirm</label>
-        <input type="password" id="cfg-confirm-pass" placeholder="Repeat" />
-      </div>
+    <div class="frow">
+      <div class="field"><label>New Password</label><input type="password" id="c-np" placeholder="Leave blank to keep" autocomplete="new-password" /></div>
+      <div class="field"><label>Confirm</label><input type="password" id="c-cp" placeholder="Repeat" autocomplete="new-password" /></div>
     </div>
-    <div class="modal-error" id="settings-error"></div>
-
-    <div class="modal-actions">
-      <button class="btn-modal" onclick="closeModal('modal-settings')">Cancel</button>
-      <button class="btn-modal primary" onclick="saveSettings()">Save &amp; Apply</button>
+    <div class="merr" id="cfg-err"></div>
+    <div class="mactions">
+      <button class="mbtn" onclick="closeM('m-settings')">Cancel</button>
+      <button class="mbtn primary" onclick="saveSettings()">Save &amp; Apply</button>
     </div>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════
-     JAVASCRIPT
-════════════════════════════════════════════════════ -->
 <script>
 'use strict';
 
-// ──────────────────────────────────────────────────────────
-// CONSTANTS
-// ──────────────────────────────────────────────────────────
-const CHART_MAX_POINTS = 300;
-const IDR_WARN_PCT     = 0.5;
-const IDR_UNSAFE_PCT   = 1.0;
-const DB_NAME          = 'eri_db';
-const DB_VERSION       = 1;
-const TOPIC_GROUND     = 'eri/ground/data';
-const TOPIC_TOP        = 'eri/top/data';
-const TOPIC_STATUS     = 'eri/status';
+// ── Constants ──────────────────────────────────────────────
+const MAXPTS   = 300;
+const WARN_PCT = 0.5;
+const UNSA_PCT = 1.0;
+const DBNAME   = 'eri_db';
+const T_GND    = 'eri/ground/data';
+const T_TOP    = 'eri/top/data';
+const T_STAT   = 'eri/status';
+const LS_HASH  = 'eri_h';     // SHA-256 hex of admin password
+const SS_AUTH  = 'eri_s';     // sessionStorage: '1' when logged in
 
-// Storage keys
-const KEY_ADMIN_HASH  = 'eri_admin_hash';
-const SESSION_ADMIN   = 'eri_session_admin';
-
-// ──────────────────────────────────────────────────────────
-// STATE
-// ──────────────────────────────────────────────────────────
+// ── Global state ───────────────────────────────────────────
 let mqttClient = null;
 let db         = null;
-const state = {
-  ground: { samples: [], count: 0 },
-  top:    { samples: [], count: 0 },
-  events: [],
-  status: {},
-  eventActive: false,
-  currentEvent: null,
+const S = { gCnt: 0, tCnt: 0, events: [], active: false, curEv: null };
+
+// ═══════════════════════════════════════════════════════════
+//  AUTH  — uses disabled attribute, NO CSS pointer-events
+// ═══════════════════════════════════════════════════════════
+const isAdmin    = () => sessionStorage.getItem(SS_AUTH) === '1';
+const hasHash    = () => !!localStorage.getItem(LS_HASH);
+const sha256     = async txt => {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
 };
 
-// ══════════════════════════════════════════════════════════
-// AUTH SYSTEM
-// ══════════════════════════════════════════════════════════
-
-// Web Crypto SHA-256 → hex string
-async function sha256(text) {
-  const buf = await crypto.subtle.digest(
-    'SHA-256', new TextEncoder().encode(text)
-  );
-  return Array.from(new Uint8Array(buf))
-    .map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-function isAdmin() {
-  return sessionStorage.getItem(SESSION_ADMIN) === '1';
-}
-
-function hasAdminPassword() {
-  return !!localStorage.getItem(KEY_ADMIN_HASH);
-}
-
-// Apply / remove locked class from all admin-only elements
+// Apply role UI: update role pill, banner, button labels,
+// and enable/disable admin-only controls via the disabled attribute.
 function applyAuthUI() {
-  const admin = isAdmin();
+  const adm = isAdmin();
 
-  // Role badge
-  const badge = document.getElementById('role-badge');
-  const icon  = document.getElementById('role-icon');
-  const label = document.getElementById('role-label');
-  badge.className = admin ? 'admin' : 'viewer';
-  icon.textContent  = admin ? '🔓' : '🔒';
-  label.textContent = admin ? 'ADMIN' : 'VIEWER';
-
-  // Login / logout button
-  document.getElementById('btn-admin-action').textContent =
-    admin ? 'Logout' : 'Login as Admin';
+  // Role pill + buttons
+  const rp = document.getElementById('role-pill');
+  rp.textContent = adm ? '🔓 ADMIN' : '🔒 VIEWER';
+  rp.className   = adm ? 'admin' : 'viewer';
+  document.getElementById('btn-login').textContent = adm ? 'Logout' : 'Login as Admin';
+  document.getElementById('btn-settings').style.display = adm ? '' : 'none';
 
   // Viewer banner
-  document.getElementById('viewer-banner').classList.toggle('show', !admin);
+  document.getElementById('viewer-banner').classList.toggle('hidden-v', adm);
 
-  // Settings button wrapper
-  document.getElementById('btn-settings-wrap').classList.toggle('locked', !admin);
-
-  // Export bar and other admin-only controls
-  document.querySelectorAll('.admin-only').forEach(el => {
-    el.classList.toggle('locked', !admin);
+  // Enable/disable export & clear buttons using the HTML disabled attribute
+  // (most reliable cross-browser mechanism — no CSS tricks needed)
+  ['bx-g','bx-t','bx-e','bx-a','bx-c'].forEach(id => {
+    document.getElementById(id).disabled = !adm;
   });
 }
 
-// Called when the admin action button is clicked
-function onAdminActionClick() {
+// Login / logout button handler
+function onLoginClick() {
   if (isAdmin()) {
-    // Logout
-    sessionStorage.removeItem(SESSION_ADMIN);
+    sessionStorage.removeItem(SS_AUTH);
     applyAuthUI();
   } else {
-    // Login — show setup if no password exists yet, else login modal
-    if (!hasAdminPassword()) {
-      openModal('modal-setup');
-    } else {
-      document.getElementById('auth-password').value = '';
-      document.getElementById('auth-error').textContent = '';
-      openModal('modal-auth');
-      setTimeout(() => document.getElementById('auth-password').focus(), 80);
-    }
+    hasHash() ? openM('m-login') : openM('m-setup');
+    setTimeout(() => {
+      const f = document.getElementById(hasHash() ? 'lp' : 'sp1');
+      if (f) f.focus();
+    }, 80);
   }
 }
 
-// Attempt login: hash entered password and compare to stored hash
-async function attemptLogin() {
-  const entered = document.getElementById('auth-password').value;
-  const errEl   = document.getElementById('auth-error');
-  if (!entered) { errEl.textContent = 'Password required.'; return; }
-
-  const hash   = await sha256(entered);
-  const stored = localStorage.getItem(KEY_ADMIN_HASH);
-
-  if (hash === stored) {
-    sessionStorage.setItem(SESSION_ADMIN, '1');
-    closeModal('modal-auth');
-    applyAuthUI();
-    // If MQTT isn't connected yet, open settings now that admin is in
-    if (!mqttClient || !isConnectedMQTT()) openSettings();
-  } else {
-    errEl.textContent = 'Incorrect password.';
-    document.getElementById('auth-password').value = '';
-    document.getElementById('auth-password').focus();
-  }
+// Settings button — only shown for admin, but double-check anyway
+function onSettingsClick() {
+  if (!isAdmin()) return;
+  const cfg = loadCfg();
+  document.getElementById('c-host').value = cfg.host;
+  document.getElementById('c-port').value = cfg.port;
+  document.getElementById('c-cid').value  = cfg.cid;
+  document.getElementById('c-user').value = cfg.user;
+  document.getElementById('c-pass').value = cfg.pass;
+  document.getElementById('c-gho').value  = cfg.gho;
+  document.getElementById('c-ghr').value  = cfg.ghr;
+  document.getElementById('c-np').value   = '';
+  document.getElementById('c-cp').value   = '';
+  document.getElementById('cfg-err').textContent = '';
+  openM('m-settings');
 }
 
-// First-time setup: set admin password
-async function commitSetup() {
-  const p1  = document.getElementById('setup-pass1').value;
-  const p2  = document.getElementById('setup-pass2').value;
-  const err = document.getElementById('setup-error');
-  if (p1.length < 8) { err.textContent = 'Password must be at least 8 characters.'; return; }
-  if (p1 !== p2)     { err.textContent = 'Passwords do not match.'; return; }
-
-  const hash = await sha256(p1);
-  localStorage.setItem(KEY_ADMIN_HASH, hash);
-  sessionStorage.setItem(SESSION_ADMIN, '1');
-  closeModal('modal-setup');
+// First-time setup
+async function doSetup() {
+  const p1 = document.getElementById('sp1').value;
+  const p2 = document.getElementById('sp2').value;
+  const er = document.getElementById('s-err');
+  if (p1.length < 8) { er.textContent = 'Password must be at least 8 characters.'; return; }
+  if (p1 !== p2)     { er.textContent = 'Passwords do not match.'; return; }
+  localStorage.setItem(LS_HASH, await sha256(p1));
+  sessionStorage.setItem(SS_AUTH, '1');
+  closeM('m-setup');
   applyAuthUI();
-  // Open settings so admin can configure MQTT right after setup
-  openSettings();
+  onSettingsClick(); // Open settings immediately after first setup
 }
 
-// ──────────────────────────────────────────────────────────
-// MODAL HELPERS
-// ──────────────────────────────────────────────────────────
-function openModal(id)  { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+// Login
+async function doLogin() {
+  const pwd = document.getElementById('lp').value;
+  const er  = document.getElementById('l-err');
+  if (!pwd) { er.textContent = 'Enter your password.'; return; }
+  const hash = await sha256(pwd);
+  if (hash === localStorage.getItem(LS_HASH)) {
+    sessionStorage.setItem(SS_AUTH, '1');
+    closeM('m-login');
+    applyAuthUI();
+  } else {
+    er.textContent = 'Incorrect password.';
+    document.getElementById('lp').value = '';
+    document.getElementById('lp').focus();
+  }
+}
 
-document.querySelectorAll('.modal-overlay').forEach(overlay => {
-  overlay.addEventListener('click', e => {
-    // Close modal when clicking the dark backdrop (not the box itself)
-    if (e.target === overlay) closeModal(overlay.id);
-  });
+// Save settings
+async function saveSettings() {
+  const er = document.getElementById('cfg-err');
+  er.textContent = '';
+  const np = document.getElementById('c-np').value;
+  if (np) {
+    const cp = document.getElementById('c-cp').value;
+    if (np.length < 8) { er.textContent = 'New password must be ≥ 8 characters.'; return; }
+    if (np !== cp)     { er.textContent = 'Passwords do not match.'; return; }
+    localStorage.setItem(LS_HASH, await sha256(np));
+  }
+  const set = (k,v) => localStorage.setItem(k,v);
+  set('eri_host', document.getElementById('c-host').value.trim());
+  set('eri_port', document.getElementById('c-port').value.trim());
+  set('eri_cid',  document.getElementById('c-cid').value.trim());
+  set('eri_user', document.getElementById('c-user').value.trim());
+  set('eri_pass', document.getElementById('c-pass').value);
+  set('eri_gho',  document.getElementById('c-gho').value.trim());
+  set('eri_ghr',  document.getElementById('c-ghr').value.trim());
+  closeM('m-settings');
+  connectMQTT();
+  loadIssues();
+}
+
+// ── Modal helpers ──────────────────────────────────────────
+const openM  = id => document.getElementById(id).classList.add('open');
+const closeM = id => document.getElementById(id).classList.remove('open');
+
+// Close on backdrop click only (not on modal box click)
+document.querySelectorAll('.overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) closeM(o.id); });
 });
 
-// ──────────────────────────────────────────────────────────
-// SETTINGS MODAL (admin only)
-// ──────────────────────────────────────────────────────────
-function loadSettings() {
+// ══════════════════════════════════════════════════════════
+//  SETTINGS LOAD
+// ══════════════════════════════════════════════════════════
+function loadCfg() {
+  const g = k => localStorage.getItem(k) || '';
   return {
-    host:     localStorage.getItem('eri_host')     || '',
-    port:     parseInt(localStorage.getItem('eri_port') || '8884'),
-    clientId: localStorage.getItem('eri_clientid') ||
-              ('eri-dash-' + Math.random().toString(36).slice(2,6)),
-    user:     localStorage.getItem('eri_user')     || '',
-    pass:     localStorage.getItem('eri_pass')     || '',
-    ghOwner:  localStorage.getItem('eri_gh_owner') || '',
-    ghRepo:   localStorage.getItem('eri_gh_repo')  || '',
+    host: g('eri_host'), port: parseInt(g('eri_port')||'8884'),
+    cid:  g('eri_cid') || ('eri-'+Math.random().toString(36).slice(2,6)),
+    user: g('eri_user'), pass: g('eri_pass'),
+    gho:  g('eri_gho'),  ghr:  g('eri_ghr'),
   };
 }
 
-function openSettings() {
-  if (!isAdmin()) return;
-  const cfg = loadSettings();
-  document.getElementById('cfg-host').value     = cfg.host;
-  document.getElementById('cfg-port').value     = cfg.port;
-  document.getElementById('cfg-clientid').value = cfg.clientId;
-  document.getElementById('cfg-user').value     = cfg.user;
-  document.getElementById('cfg-pass').value     = cfg.pass;
-  document.getElementById('cfg-gh-owner').value = cfg.ghOwner;
-  document.getElementById('cfg-gh-repo').value  = cfg.ghRepo;
-  document.getElementById('cfg-new-pass').value     = '';
-  document.getElementById('cfg-confirm-pass').value = '';
-  document.getElementById('settings-error').textContent = '';
-  openModal('modal-settings');
-}
-
-async function saveSettings() {
-  if (!isAdmin()) return;
-  const errEl = document.getElementById('settings-error');
-  errEl.textContent = '';
-
-  // ── Optionally change admin password ──────────────────
-  const newPass = document.getElementById('cfg-new-pass').value;
-  if (newPass) {
-    const conf = document.getElementById('cfg-confirm-pass').value;
-    if (newPass.length < 8) { errEl.textContent = 'New password must be ≥ 8 characters.'; return; }
-    if (newPass !== conf)   { errEl.textContent = 'Passwords do not match.'; return; }
-    const hash = await sha256(newPass);
-    localStorage.setItem(KEY_ADMIN_HASH, hash);
-    // Keep the session alive after password change
+// ══════════════════════════════════════════════════════════
+//  CHARTS
+// ══════════════════════════════════════════════════════════
+const mkDS = (c) => ({ data:[], borderColor:c, borderWidth:1, pointRadius:0, tension:.1 });
+const mkChart = (id, dsets) => new Chart(
+  document.getElementById(id).getContext('2d'), {
+    type:'line', data:{ labels:[], datasets:dsets },
+    options:{ responsive:true, maintainAspectRatio:false, animation:false,
+              plugins:{ legend:{display:false}, tooltip:{enabled:false} },
+              scales:{ x:{display:false}, y:{ display:true,
+                ticks:{color:'#475569',font:{family:'JetBrains Mono',size:9},maxTicksLimit:3,callback:v=>v.toFixed(2)},
+                grid:{color:'#1e2533'}, border:{color:'#1e2533'} } } }
   }
+);
+const C = ['#f97316','#38bdf8','#a78bfa'];
+const gAC = mkChart('g-ac', C.map(c=>mkDS(c)));
+const gVL = mkChart('g-vl', C.map(c=>mkDS(c)));
+const gDP = mkChart('g-dp', C.map(c=>mkDS(c)));
+const tAC = mkChart('t-ac', C.map(c=>mkDS(c)));
+const tVL = mkChart('t-vl', C.map(c=>mkDS(c)));
+const tDP = mkChart('t-dp', C.map(c=>mkDS(c)));
+const idrC= mkChart('idr-c',[mkDS('#ef4444')]);
 
-  localStorage.setItem('eri_host',     document.getElementById('cfg-host').value.trim());
-  localStorage.setItem('eri_port',     document.getElementById('cfg-port').value.trim());
-  localStorage.setItem('eri_clientid', document.getElementById('cfg-clientid').value.trim());
-  localStorage.setItem('eri_user',     document.getElementById('cfg-user').value.trim());
-  localStorage.setItem('eri_pass',     document.getElementById('cfg-pass').value);
-  localStorage.setItem('eri_gh_owner', document.getElementById('cfg-gh-owner').value.trim());
-  localStorage.setItem('eri_gh_repo',  document.getElementById('cfg-gh-repo').value.trim());
-
-  closeModal('modal-settings');
-  connectMQTT();
-  loadGitHubIssues();
-}
-
-// ──────────────────────────────────────────────────────────
-// CHART SETUP
-// ──────────────────────────────────────────────────────────
-function makeDS(label, color) {
-  return { label, data: [], borderColor: color, borderWidth: 1, pointRadius: 0, tension: 0.1 };
-}
-function makeChart(id, datasets) {
-  const ctx = document.getElementById(id).getContext('2d');
-  return new Chart(ctx, {
-    type: 'line',
-    data: { labels: [], datasets },
-    options: {
-      responsive: true, maintainAspectRatio: false, animation: false,
-      plugins: { legend: { display: false }, tooltip: { enabled: false } },
-      scales: {
-        x: { display: false },
-        y: { display: true,
-             ticks: { color: '#475569', font: { family: 'JetBrains Mono', size: 9 }, maxTicksLimit: 3, callback: v => v.toFixed(2) },
-             grid: { color: '#1e2533' }, border: { color: '#1e2533' } }
-      }
-    }
-  });
-}
-
-const COLORS = ['#f97316','#38bdf8','#a78bfa'];
-const gAccelChart = makeChart('g-accel', COLORS.map((c,i) => makeDS('XYZ'[i], c)));
-const gVelChart   = makeChart('g-vel',   COLORS.map((c,i) => makeDS('XYZ'[i], c)));
-const gDispChart  = makeChart('g-disp',  COLORS.map((c,i) => makeDS('XYZ'[i], c)));
-const tAccelChart = makeChart('t-accel', COLORS.map((c,i) => makeDS('XYZ'[i], c)));
-const tVelChart   = makeChart('t-vel',   COLORS.map((c,i) => makeDS('XYZ'[i], c)));
-const tDispChart  = makeChart('t-disp',  COLORS.map((c,i) => makeDS('XYZ'[i], c)));
-const idrChart    = makeChart('idr-chart', [makeDS('IDR', '#ef4444')]);
-
-function pushChart(chart, ts, values) {
-  const lbl = new Date(ts).toLocaleTimeString('en-US', { hour12: false });
-  chart.data.labels.push(lbl);
-  values.forEach((v,i) => chart.data.datasets[i].data.push(v));
-  if (chart.data.labels.length > CHART_MAX_POINTS) {
-    chart.data.labels.shift();
-    chart.data.datasets.forEach(ds => ds.data.shift());
+function push(ch, ts, vals) {
+  const lbl = new Date(ts).toLocaleTimeString('en-US',{hour12:false});
+  ch.data.labels.push(lbl);
+  vals.forEach((v,i) => ch.data.datasets[i].data.push(v));
+  if (ch.data.labels.length > MAXPTS) {
+    ch.data.labels.shift();
+    ch.data.datasets.forEach(d=>d.data.shift());
   }
-  chart.update('none');
+  ch.update('none');
 }
 
-// ──────────────────────────────────────────────────────────
-// INDEXEDDB
-// ──────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════
+//  INDEXEDDB
+// ══════════════════════════════════════════════════════════
 function openDB() {
-  return new Promise((res, rej) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = e => {
+  return new Promise((res,rej) => {
+    const r = indexedDB.open(DBNAME,1);
+    r.onupgradeneeded = e => {
       const d = e.target.result;
       ['ground','top','events'].forEach(s => {
         if (!d.objectStoreNames.contains(s))
-          d.createObjectStore(s, { autoIncrement: true });
+          d.createObjectStore(s,{autoIncrement:true});
       });
     };
-    req.onsuccess = e => res(e.target.result);
-    req.onerror   = e => rej(e.target.error);
+    r.onsuccess = e => res(e.target.result);
+    r.onerror   = e => rej(e.target.error);
   });
 }
-const dbAdd = (store, rec) => {
+const dbAdd = (st,rec) => {
   if (!db) return;
-  db.transaction(store, 'readwrite').objectStore(store).add(rec);
+  db.transaction(st,'readwrite').objectStore(st).add(rec);
 };
-const dbGetLast = (store, n) => new Promise(res => {
+const dbLast = (st,n) => new Promise(res => {
   if (!db) return res([]);
-  db.transaction(store,'readonly').objectStore(store).getAll().onsuccess =
+  db.transaction(st,'readonly').objectStore(st).getAll().onsuccess =
     e => res(e.target.result.slice(-n));
 });
-const dbGetAll = store => new Promise(res => {
+const dbAll = st => new Promise(res => {
   if (!db) return res([]);
-  db.transaction(store,'readonly').objectStore(store).getAll().onsuccess =
+  db.transaction(st,'readonly').objectStore(st).getAll().onsuccess =
     e => res(e.target.result);
 });
 
 async function loadHistory() {
-  const [gs, ts, evs] = await Promise.all([
-    dbGetLast('ground', CHART_MAX_POINTS),
-    dbGetLast('top',    CHART_MAX_POINTS),
-    dbGetAll('events'),
+  const [gs,ts,evs] = await Promise.all([
+    dbLast('ground',MAXPTS), dbLast('top',MAXPTS), dbAll('events')
   ]);
-  gs.forEach(s => {
-    pushChart(gAccelChart, s.ts, [s.ax, s.ay, s.az]);
-    pushChart(gVelChart,   s.ts, [s.vx, s.vy, s.vz]);
-    pushChart(gDispChart,  s.ts, [s.dx*1000, s.dy*1000, s.dz*1000]);
-  });
-  ts.forEach(s => {
-    pushChart(tAccelChart, s.ts, [s.ax, s.ay, s.az]);
-    pushChart(tVelChart,   s.ts, [s.vx, s.vy, s.vz]);
-    pushChart(tDispChart,  s.ts, [s.dx*1000, s.dy*1000, s.dz*1000]);
-  });
-  state.ground.count = gs.length;
-  state.top.count    = ts.length;
-  evs.forEach(ev => addEventCard(ev));
-  updateSampleCounter();
+  gs.forEach(s => { push(gAC,s.ts,[s.ax,s.ay,s.az]); push(gVL,s.ts,[s.vx,s.vy,s.vz]); push(gDP,s.ts,[s.dx*1000,s.dy*1000,s.dz*1000]); });
+  ts.forEach(s => { push(tAC,s.ts,[s.ax,s.ay,s.az]); push(tVL,s.ts,[s.vx,s.vy,s.vz]); push(tDP,s.ts,[s.dx*1000,s.dy*1000,s.dz*1000]); });
+  S.gCnt = gs.length; S.tCnt = ts.length;
+  evs.forEach(ev => addEvCard(ev));
+  updateCtr();
 }
 
-// ──────────────────────────────────────────────────────────
-// MQTT
-// ──────────────────────────────────────────────────────────
-function isConnectedMQTT() { return mqttClient && mqttClient.connected; }
-
+// ══════════════════════════════════════════════════════════
+//  MQTT
+// ══════════════════════════════════════════════════════════
 function connectMQTT() {
-  const cfg = loadSettings();
-  if (!cfg.host) return; // silently skip — settings will prompt
+  const cfg = loadCfg();
+  if (!cfg.host) return;
   if (mqttClient) mqttClient.end(true);
-
-  setConnPill('connecting');
+  setConn('connecting');
   mqttClient = mqtt.connect(`wss://${cfg.host}:${cfg.port}/mqtt`, {
-    clientId: cfg.clientId, username: cfg.user, password: cfg.pass,
-    reconnectPeriod: 5000, connectTimeout: 15000, keepalive: 60, clean: true,
+    clientId:cfg.cid, username:cfg.user, password:cfg.pass,
+    reconnectPeriod:5000, connectTimeout:15000, keepalive:60, clean:true,
   });
   mqttClient.on('connect', () => {
-    setConnPill('live');
-    mqttClient.subscribe([TOPIC_GROUND, TOPIC_TOP, TOPIC_STATUS], { qos: 1 });
+    setConn('live');
+    mqttClient.subscribe([T_GND,T_TOP,T_STAT],{qos:1});
   });
-  mqttClient.on('message', (topic, payload) => {
+  mqttClient.on('message', (topic,payload) => {
     try {
-      const msg = JSON.parse(payload.toString());
-      document.getElementById('last-msg-time').textContent =
-        'Last message: ' + new Date().toLocaleTimeString();
-      if      (topic === TOPIC_GROUND) handleFloor('ground', msg);
-      else if (topic === TOPIC_TOP)    handleFloor('top',    msg);
-      else if (topic === TOPIC_STATUS) handleStatus(msg);
-    } catch(_) {}
+      const m = JSON.parse(payload.toString());
+      document.getElementById('last-rx').textContent = 'Last: '+new Date().toLocaleTimeString();
+      if      (topic===T_GND)  handleFloor('ground',m);
+      else if (topic===T_TOP)  handleFloor('top',m);
+      else if (topic===T_STAT) handleStatus(m);
+    } catch(_){}
   });
-  mqttClient.on('error',     () => setConnPill('error'));
-  mqttClient.on('offline',   () => setConnPill('offline'));
-  mqttClient.on('reconnect', () => setConnPill('connecting'));
+  mqttClient.on('error',     ()=>setConn('err'));
+  mqttClient.on('offline',   ()=>setConn('offline'));
+  mqttClient.on('reconnect', ()=>setConn('connecting'));
+}
+function setConn(s) {
+  const p = document.getElementById('conn-pill');
+  const l = document.getElementById('conn-lbl');
+  p.className = 'pill'+(s==='live'?' live':s==='err'||s==='offline'?' err':'');
+  l.textContent = s.toUpperCase();
 }
 
-function setConnPill(s) {
-  const pill  = document.getElementById('conn-pill');
-  const label = document.getElementById('conn-label');
-  pill.className = 'conn-pill' +
-    (s==='live'?  ' live' : s==='error'||s==='offline'? ' error' : '');
-  label.textContent = s.toUpperCase();
+// ══════════════════════════════════════════════════════════
+//  MESSAGE HANDLERS
+// ══════════════════════════════════════════════════════════
+function handleFloor(fl, m) {
+  const aC = fl==='ground'?gAC:tAC, vC = fl==='ground'?gVL:tVL, dC = fl==='ground'?gDP:tDP;
+  push(aC,m.ts,[m.ax,m.ay,m.az]);
+  push(vC,m.ts,[m.vx,m.vy,m.vz]);
+  push(dC,m.ts,[m.dx*1000,m.dy*1000,m.dz*1000]);
+  const te = document.getElementById(fl==='ground'?'g-temp':'t-temp');
+  if (te) te.textContent = m.tc.toFixed(1);
+  dbAdd(fl,m);
+  if (fl==='ground') S.gCnt++; else S.tCnt++;
+  updateCtr();
+}
+function handleStatus(m) {
+  const b = document.getElementById('status-badge');
+  b.className='status-badge '+m.st; b.textContent=m.st;
+  const cp = typeof m.conf==='number'?m.conf.toFixed(1):'—';
+  document.getElementById('conf-txt').textContent='Confidence: '+cp+'%';
+  updateArc(m.conf,m.st);
+  updIDR('x',m.ix); updIDR('y',m.iy); updIDR('z',m.iz);
+  document.getElementById('rdx').textContent=(m.rdx*1000).toFixed(3)+' mm';
+  document.getElementById('rdy').textContent=(m.rdy*1000).toFixed(3)+' mm';
+  document.getElementById('rdz').textContent=(m.rdz*1000).toFixed(3)+' mm';
+  push(idrC,m.ts,[Math.max(m.ix,m.iy,m.iz)]);
+  trackEv(m);
+}
+function updIDR(ax,pct) {
+  document.getElementById('i'+ax+'-v').textContent=pct.toFixed(3)+'%';
+  const b=document.getElementById('i'+ax+'-b');
+  b.style.width=Math.min(100,(pct/2)*100)+'%';
+  b.style.background=pct<WARN_PCT?'var(--green)':pct<UNSA_PCT?'var(--yellow)':'var(--red)';
+}
+function updateArc(conf,st) {
+  const a=document.getElementById('arc'),l=document.getElementById('arc-label');
+  a.style.strokeDashoffset=157-(conf/100)*157;
+  a.style.stroke=st==='SAFE'?'#22c55e':st==='WARNING'?'#eab308':st==='UNSAFE'?'#ef4444':'#475569';
+  l.textContent=typeof conf==='number'?conf.toFixed(1)+'%':'—';
 }
 
-// ──────────────────────────────────────────────────────────
-// MESSAGE HANDLERS
-// ──────────────────────────────────────────────────────────
-function handleFloor(floor, msg) {
-  const aC = floor === 'ground' ? gAccelChart : tAccelChart;
-  const vC = floor === 'ground' ? gVelChart   : tVelChart;
-  const dC = floor === 'ground' ? gDispChart  : tDispChart;
-  pushChart(aC, msg.ts, [msg.ax, msg.ay, msg.az]);
-  pushChart(vC, msg.ts, [msg.vx, msg.vy, msg.vz]);
-  pushChart(dC, msg.ts, [msg.dx*1000, msg.dy*1000, msg.dz*1000]);
-  const te = document.getElementById(floor==='ground' ? 'g-temp' : 't-temp');
-  if (te) te.textContent = msg.tc.toFixed(1);
-  dbAdd(floor, msg);
-  state[floor].count++;
-  updateSampleCounter();
-}
-
-function handleStatus(msg) {
-  state.status = msg;
-  const badge = document.getElementById('status-badge');
-  badge.className = 'status-badge ' + msg.st;
-  badge.textContent = msg.st;
-  document.getElementById('conf-text').textContent =
-    'Confidence: ' + (typeof msg.conf === 'number' ? msg.conf.toFixed(1) : '—') + '%';
-  updateConfArc(msg.conf, msg.st);
-  updateIDRBar('x', msg.ix);
-  updateIDRBar('y', msg.iy);
-  updateIDRBar('z', msg.iz);
-  document.getElementById('rel-dx').textContent = (msg.rdx*1000).toFixed(3) + ' mm';
-  document.getElementById('rel-dy').textContent = (msg.rdy*1000).toFixed(3) + ' mm';
-  document.getElementById('rel-dz').textContent = (msg.rdz*1000).toFixed(3) + ' mm';
-  pushChart(idrChart, msg.ts, [Math.max(msg.ix, msg.iy, msg.iz)]);
-  trackEvent(msg);
-}
-
-function updateIDRBar(axis, pct) {
-  const v = document.getElementById(`idr-${axis}-val`);
-  const b = document.getElementById(`idr-${axis}-bar`);
-  if (!v||!b) return;
-  v.textContent = pct.toFixed(3) + '%';
-  b.style.width = Math.min(100, (pct/2)*100) + '%';
-  b.style.background = pct < IDR_WARN_PCT ? 'var(--green)' :
-                       pct < IDR_UNSAFE_PCT ? 'var(--yellow)' : 'var(--red)';
-}
-
-function updateConfArc(conf, status) {
-  const arc = document.getElementById('arc-fill');
-  const lbl = document.getElementById('conf-arc-label');
-  const ARC = 157;
-  arc.style.strokeDashoffset = ARC - (conf/100)*ARC;
-  arc.style.stroke = status==='SAFE'?'#22c55e':status==='WARNING'?'#eab308':status==='UNSAFE'?'#ef4444':'#475569';
-  lbl.textContent = typeof conf==='number' ? conf.toFixed(1)+'%' : '—';
-}
-
-// ──────────────────────────────────────────────────────────
-// EVENT TRACKING
-// ──────────────────────────────────────────────────────────
-function trackEvent(status) {
-  if (status.st === 'UNSAFE') {
-    if (!state.eventActive) {
-      state.eventActive  = true;
-      state.currentEvent = { startMs: Date.now(), peakIDR: Math.max(status.ix,status.iy,status.iz), peakConf: status.conf, samples: [status] };
+// ══════════════════════════════════════════════════════════
+//  EVENT TRACKING
+// ══════════════════════════════════════════════════════════
+function trackEv(m) {
+  if (m.st==='UNSAFE') {
+    if (!S.active) {
+      S.active=true;
+      S.curEv={startMs:Date.now(),peakIDR:Math.max(m.ix,m.iy,m.iz),peakConf:m.conf,samples:[m]};
     } else {
-      state.currentEvent.samples.push(status);
-      const idr = Math.max(status.ix,status.iy,status.iz);
-      if (idr > state.currentEvent.peakIDR) { state.currentEvent.peakIDR = idr; state.currentEvent.peakConf = status.conf; }
+      S.curEv.samples.push(m);
+      const idr=Math.max(m.ix,m.iy,m.iz);
+      if (idr>S.curEv.peakIDR){S.curEv.peakIDR=idr;S.curEv.peakConf=m.conf;}
     }
-  } else if (status.st === 'SAFE' && state.eventActive) {
-    state.eventActive = false;
-    const ev = { ...state.currentEvent, endMs: Date.now(), durationS: (Date.now()-state.currentEvent.startMs)/1000 };
-    state.currentEvent = null;
-    dbAdd('events', ev);
-    state.events.push(ev);
-    addEventCard(ev);
+  } else if (m.st==='SAFE'&&S.active) {
+    S.active=false;
+    const ev={...S.curEv,endMs:Date.now(),durationS:(Date.now()-S.curEv.startMs)/1000};
+    S.curEv=null;
+    dbAdd('events',ev); S.events.push(ev); addEvCard(ev);
   }
 }
-
-function addEventCard(ev) {
-  const noEl = document.getElementById('no-events');
-  if (noEl) noEl.remove();
-  const list   = document.getElementById('events-list');
-  const cardId = 'ev-' + ev.startMs;
-  const card   = document.createElement('div');
-  card.className = 'event-card';
-  card.innerHTML = `
-    <div class="event-card-header" onclick="toggleEventCard('${cardId}')">
-      <span class="ev-time">${new Date(ev.startMs).toLocaleString()}</span>
-      <span class="ev-idr">Peak IDR: ${ev.peakIDR.toFixed(3)}%</span>
-      <span class="ev-dur">${ev.durationS.toFixed(1)} s</span>
+function addEvCard(ev) {
+  const ne=document.getElementById('no-ev'); if(ne)ne.remove();
+  const list=document.getElementById('ev-list');
+  const id='ev'+ev.startMs;
+  const c=document.createElement('div'); c.className='ev-card';
+  c.innerHTML=`
+    <div class="ev-hdr" onclick="toggleEv('${id}')">
+      <span class="et">${new Date(ev.startMs).toLocaleString()}</span>
+      <span class="ei">Peak IDR: ${ev.peakIDR.toFixed(3)}%</span>
+      <span class="ed">${ev.durationS.toFixed(1)} s</span>
     </div>
-    <div class="event-card-body" id="${cardId}">
+    <div class="ev-body" id="${id}">
       <div style="font-size:.65rem;color:var(--text-dim);margin-bottom:6px">
-        Duration: ${ev.durationS.toFixed(1)} s &nbsp;|&nbsp;
-        Conf at peak: ${ev.peakConf ? ev.peakConf.toFixed(1) : '—'}% &nbsp;|&nbsp;
-        Samples: ${ev.samples ? ev.samples.length : 0}
+        Duration: ${ev.durationS.toFixed(1)} s | Conf: ${ev.peakConf?ev.peakConf.toFixed(1):'—'}% | Samples: ${ev.samples?ev.samples.length:0}
       </div>
-      <div class="event-chart-wrap"><canvas id="evc-${ev.startMs}"></canvas></div>
+      <div class="ev-cw"><canvas id="ec${ev.startMs}"></canvas></div>
     </div>`;
-  list.insertBefore(card, list.firstChild);
-  const n = list.querySelectorAll('.event-card').length;
-  document.getElementById('events-count-badge').textContent = n + ' event' + (n!==1?'s':'');
+  list.insertBefore(c,list.firstChild);
+  const n=list.querySelectorAll('.ev-card').length;
+  document.getElementById('ev-badge').textContent=n+' event'+(n!==1?'s':'');
 }
-
-function toggleEventCard(id) {
-  const body = document.getElementById(id);
-  if (!body) return;
-  const isOpen = body.classList.toggle('open');
-  if (isOpen) {
-    const ev = state.events.find(e => 'ev-'+e.startMs === id);
-    const canvas = document.getElementById('evc-' + id.replace('ev-',''));
-    if (canvas && !canvas._chartDone && ev && ev.samples) {
-      canvas._chartDone = true;
-      new Chart(canvas.getContext('2d'), {
+function toggleEv(id) {
+  const b=document.getElementById(id); if(!b)return;
+  b.classList.toggle('open');
+  if(b.classList.contains('open')){
+    const ev=S.events.find(e=>'ev'+e.startMs===id);
+    const cv=document.getElementById('ec'+id.replace('ev',''));
+    if(cv&&!cv._done&&ev&&ev.samples){
+      cv._done=true;
+      new Chart(cv.getContext('2d'),{
         type:'line',
-        data: { labels: ev.samples.map((_,i)=>i),
-                datasets:[{ data: ev.samples.map(s=>Math.max(s.ix||0,s.iy||0,s.iz||0)),
-                            borderColor:'#ef4444', borderWidth:1.5, pointRadius:0,
-                            fill:true, backgroundColor:'rgba(239,68,68,.12)' }] },
-        options:{ responsive:true, maintainAspectRatio:false, animation:false,
-                  plugins:{legend:{display:false}},
-                  scales:{x:{display:false},y:{display:true,
-                    ticks:{color:'#475569',font:{size:9},maxTicksLimit:3},
-                    grid:{color:'#1e2533'},border:{color:'#1e2533'}}} }
+        data:{labels:ev.samples.map((_,i)=>i),
+              datasets:[{data:ev.samples.map(s=>Math.max(s.ix||0,s.iy||0,s.iz||0)),
+                         borderColor:'#ef4444',borderWidth:1.5,pointRadius:0,
+                         fill:true,backgroundColor:'rgba(239,68,68,.12)'}]},
+        options:{responsive:true,maintainAspectRatio:false,animation:false,
+                 plugins:{legend:{display:false}},
+                 scales:{x:{display:false},y:{display:true,
+                   ticks:{color:'#475569',font:{size:9},maxTicksLimit:3},
+                   grid:{color:'#1e2533'},border:{color:'#1e2533'}}}}
       });
     }
   }
 }
 
-// ──────────────────────────────────────────────────────────
-// CSV EXPORT  (admin-gated)
-// ──────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════
+//  CSV EXPORT
+// ══════════════════════════════════════════════════════════
 async function exportCSV(type) {
   if (!isAdmin()) return;
-  const ts = () => new Date().toISOString().replace(/[:.]/g,'-');
-  if (type==='ground'||type==='all') downloadCSV(buildSampleCSV(await dbGetAll('ground')), `eri_ground_${ts()}.csv`);
-  if (type==='top'   ||type==='all') downloadCSV(buildSampleCSV(await dbGetAll('top')),    `eri_top_${ts()}.csv`);
-  if (type==='events'||type==='all') downloadCSV(buildEventsCSV(await dbGetAll('events')), `eri_events_${ts()}.csv`);
+  const ts = ()=>new Date().toISOString().replace(/[:.]/g,'-');
+  if(type==='ground'||type==='all') dl(buildSC(await dbAll('ground')),`eri_ground_${ts()}.csv`);
+  if(type==='top'   ||type==='all') dl(buildSC(await dbAll('top')),   `eri_top_${ts()}.csv`);
+  if(type==='events'||type==='all') dl(buildEC(await dbAll('events')),`eri_events_${ts()}.csv`);
 }
-function buildSampleCSV(rows) {
-  return 'timestamp_ms,ax_g,ay_g,az_g,vx_ms,vy_ms,vz_ms,dx_m,dy_m,dz_m,temp_c,reset\n'
-       + rows.map(r=>[r.ts,r.ax,r.ay,r.az,r.vx,r.vy,r.vz,r.dx,r.dy,r.dz,r.tc,r.rst].join(',')).join('\n');
-}
-function buildEventsCSV(rows) {
-  return 'start_ms,end_ms,duration_s,peak_idr_pct,peak_conf_pct\n'
-       + rows.map(r=>[r.startMs,r.endMs,r.durationS.toFixed(2),r.peakIDR.toFixed(4),(r.peakConf||0).toFixed(2)].join(',')).join('\n');
-}
-function downloadCSV(content, filename) {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([content], {type:'text/csv'}));
-  a.download = filename; a.click();
-  URL.revokeObjectURL(a.href);
+const buildSC = rows =>
+  'timestamp_ms,ax_g,ay_g,az_g,vx_ms,vy_ms,vz_ms,dx_m,dy_m,dz_m,temp_c,reset\n'
+  +rows.map(r=>[r.ts,r.ax,r.ay,r.az,r.vx,r.vy,r.vz,r.dx,r.dy,r.dz,r.tc,r.rst].join(',')).join('\n');
+const buildEC = rows =>
+  'start_ms,end_ms,duration_s,peak_idr_pct,peak_conf_pct\n'
+  +rows.map(r=>[r.startMs,r.endMs,r.durationS.toFixed(2),r.peakIDR.toFixed(4),(r.peakConf||0).toFixed(2)].join(',')).join('\n');
+function dl(content,name){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type:'text/csv'}));
+  a.download=name; a.click(); URL.revokeObjectURL(a.href);
 }
 
 async function clearDB() {
   if (!isAdmin()) return;
-  if (!confirm('Clear ALL stored history from this browser? This cannot be undone.')) return;
-  for (const s of ['ground','top','events']) {
-    db.transaction(s,'readwrite').objectStore(s).clear();
-  }
-  [gAccelChart,gVelChart,gDispChart,tAccelChart,tVelChart,tDispChart,idrChart].forEach(c => {
-    c.data.labels = []; c.data.datasets.forEach(ds => ds.data=[]); c.update('none');
+  if (!confirm('Clear ALL stored history? This cannot be undone.')) return;
+  ['ground','top','events'].forEach(s=>db.transaction(s,'readwrite').objectStore(s).clear());
+  [gAC,gVL,gDP,tAC,tVL,tDP,idrC].forEach(c=>{
+    c.data.labels=[];c.data.datasets.forEach(d=>d.data=[]);c.update('none');
   });
-  document.getElementById('events-list').innerHTML = '<div id="no-events">No unsafe events recorded in this session.</div>';
-  document.getElementById('events-count-badge').textContent = '0 events';
-  state.ground.count = state.top.count = 0;
-  updateSampleCounter();
+  document.getElementById('ev-list').innerHTML='<div id="no-ev">No unsafe events recorded yet.</div>';
+  document.getElementById('ev-badge').textContent='0 events';
+  S.gCnt=S.tCnt=0; updateCtr();
 }
 
-// ──────────────────────────────────────────────────────────
-// GITHUB ISSUES
-// ──────────────────────────────────────────────────────────
-async function loadGitHubIssues() {
-  const { ghOwner, ghRepo } = loadSettings();
-  const loadEl  = document.getElementById('gh-loading');
-  const errEl   = document.getElementById('gh-error');
-  const listEl  = document.getElementById('gh-issues-list');
-  const footEl  = document.getElementById('gh-footer');
-  const badge   = document.getElementById('gh-count-badge');
-  if (!ghOwner||!ghRepo) {
-    loadEl.classList.add('hidden');
-    errEl.textContent = 'GitHub owner/repo not configured. Log in as admin and open ⚙ Settings.';
-    errEl.classList.remove('hidden'); return;
+// ══════════════════════════════════════════════════════════
+//  GITHUB ISSUES
+// ══════════════════════════════════════════════════════════
+async function loadIssues() {
+  const {gho,ghr}=loadCfg();
+  const loadEl=document.getElementById('gh-load');
+  const errEl =document.getElementById('gh-err');
+  const listEl=document.getElementById('gh-list');
+  const footEl=document.getElementById('gh-foot');
+  const badge =document.getElementById('gh-badge');
+  if(!gho||!ghr){
+    loadEl.style.display='none';
+    errEl.textContent='GitHub owner/repo not set. Log in as Admin → ⚙ Settings.';
+    errEl.style.display='block'; return;
   }
-  loadEl.classList.remove('hidden');
-  errEl.classList.add('hidden'); listEl.classList.add('hidden'); footEl.classList.add('hidden');
+  loadEl.style.display='block'; errEl.style.display='none';
+  listEl.style.display='none';  footEl.style.display='none';
   try {
-    const res = await fetch(
-      `https://api.github.com/repos/${ghOwner}/${ghRepo}/issues?labels=unsafe-event&state=all&per_page=20&sort=created&direction=desc`,
-      { headers:{'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'} }
+    const r=await fetch(
+      `https://api.github.com/repos/${gho}/${ghr}/issues?labels=unsafe-event&state=all&per_page=20&sort=created&direction=desc`,
+      {headers:{'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'}}
     );
-    if (res.status===404) throw new Error('Repo not found or private — make it public.');
-    if (!res.ok) throw new Error(`GitHub API error: HTTP ${res.status}`);
-    const issues = await res.json();
-    loadEl.classList.add('hidden');
-    badge.textContent = issues.length + ' issue' + (issues.length!==1?'s':'');
-    listEl.innerHTML = issues.length ? issues.map(i=>`
-      <div class="gh-issue ${i.state}-issue">
-        <span class="gh-num">#${i.number}</span>
-        <div class="gh-title"><a href="${i.html_url}" target="_blank">${escHtml(i.title)}</a></div>
-        <span class="gh-state ${i.state}">${i.state}</span>
-        <span class="gh-meta">${timeAgo(new Date(i.created_at))}</span>
+    if(r.status===404) throw new Error('Repo not found or private — must be public.');
+    if(!r.ok) throw new Error('GitHub API error: HTTP '+r.status);
+    const iss=await r.json();
+    loadEl.style.display='none';
+    badge.textContent=iss.length+' issue'+(iss.length!==1?'s':'');
+    listEl.innerHTML=iss.length?iss.map(i=>`
+      <div class="gh-iss ${i.state}-issue">
+        <span class="gn">#${i.number}</span>
+        <div class="gt"><a href="${i.html_url}" target="_blank">${esc(i.title)}</a></div>
+        <span class="gs ${i.state}">${i.state}</span>
+        <span class="gm">${ago(new Date(i.created_at))}</span>
       </div>`).join('')
-      : '<div style="font-size:.75rem;color:var(--text-dim);padding:12px">No unsafe-event issues found.</div>';
-    listEl.classList.remove('hidden');
-    document.getElementById('gh-repo-link').href = `https://github.com/${ghOwner}/${ghRepo}`;
-    document.getElementById('gh-repo-link').textContent = `${ghOwner}/${ghRepo}`;
-    footEl.classList.remove('hidden');
-  } catch(err) {
-    loadEl.classList.add('hidden');
-    errEl.textContent = err.message;
-    errEl.classList.remove('hidden');
-    badge.textContent = 'Error';
+      :'<div style="font-size:.75rem;color:var(--text-dim);padding:12px">No unsafe-event issues found.</div>';
+    listEl.style.display='block';
+    document.getElementById('gh-link').href=`https://github.com/${gho}/${ghr}`;
+    document.getElementById('gh-link').textContent=`${gho}/${ghr}`;
+    footEl.style.display='block';
+  } catch(err){
+    loadEl.style.display='none';
+    errEl.textContent=err.message; errEl.style.display='block'; badge.textContent='Error';
   }
 }
-const escHtml = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-function timeAgo(d) {
-  const s = Math.floor((Date.now()-d)/1000);
-  return s<60 ? s+'s ago' : s<3600 ? Math.floor(s/60)+'m ago' :
-         s<86400 ? Math.floor(s/3600)+'h ago' : Math.floor(s/86400)+'d ago';
-}
+const esc = s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const ago = d=>{const s=Math.floor((Date.now()-d)/1000);return s<60?s+'s ago':s<3600?Math.floor(s/60)+'m ago':s<86400?Math.floor(s/3600)+'h ago':Math.floor(s/86400)+'d ago';};
 
-// ──────────────────────────────────────────────────────────
-// MISC UI
-// ──────────────────────────────────────────────────────────
-function toggleSection(hdr) {
-  hdr.classList.toggle('open');
-  hdr.nextElementSibling.classList.toggle('open');
-}
-function updateSampleCounter() {
-  document.getElementById('sample-counter').textContent =
-    `Ground: ${state.ground.count} | Top: ${state.top.count} samples`;
-}
+// ── Misc UI ────────────────────────────────────────────────
+function toggleSec(hdr){hdr.classList.toggle('open');hdr.nextElementSibling.classList.toggle('open');}
+function updateCtr(){document.getElementById('s-counter').textContent=`Ground: ${S.gCnt} | Top: ${S.tCnt} samples`;}
 
-// ──────────────────────────────────────────────────────────
-// BOOT
-// ──────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════════════════════════
 (async function boot() {
-  // 1. Apply auth UI based on sessionStorage (survives refresh, not tab close)
+  // 1. Auth UI (reads sessionStorage — survives F5, not tab close)
   applyAuthUI();
 
-  // 2. Open IndexedDB and replay history into charts
-  db = await openDB();
-  await loadHistory();
+  // 2. History from IndexedDB
+  try {
+    db = await openDB();
+    await loadHistory();
+  } catch(e) {
+    console.warn('IndexedDB unavailable:', e);
+  }
 
-  // 3. Connect MQTT (no host prompt — Settings modal handles that)
-  //    If host is already saved, connect immediately regardless of role.
-  //    Viewers can see live data; they just can't change settings.
+  // 3. MQTT (connects if host already saved)
   connectMQTT();
 
-  // 4. Load GitHub issues
-  loadGitHubIssues();
-  setInterval(loadGitHubIssues, 5 * 60 * 1000);
+  // 4. GitHub issues (auto-refresh every 5 min)
+  loadIssues();
+  setInterval(loadIssues, 5 * 60 * 1000);
 
-  // 5. Show setup modal unconditionally if no admin password exists yet.
-  //    Removing the old && !host condition that caused it to silently
-  //    skip when any prior state was in localStorage.
-  if (!hasAdminPassword()) {
-    setTimeout(() => openModal('modal-setup'), 400);
+  // 5. First-time: open setup modal if no password has ever been set
+  if (!hasHash()) {
+    setTimeout(() => openM('m-setup'), 500);
   }
 })();
 </script>
