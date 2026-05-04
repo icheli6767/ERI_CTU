@@ -312,6 +312,15 @@ button:disabled {
   <button class="hdr-btn" id="btn-settings" onclick="onSettingsClick()">⚙ Settings</button>
 </header>
 
+<!-- ══════════════ MQTT NOT CONFIGURED BANNER ══════════════ -->
+<div id="no-mqtt-banner" style="display:none;background:rgba(239,68,68,.08);
+  border-bottom:1px solid #7f1d1d;padding:8px 20px;font-size:.72rem;
+  color:#f87171;text-align:center;">
+  ⚠ &nbsp;No MQTT broker configured — charts will not receive data.
+  &nbsp;<b style="cursor:pointer;text-decoration:underline" onclick="onLoginClick()">
+  Log in as Admin → ⚙ Settings</b> to enter your HiveMQ credentials.
+</div>
+
 <!-- ══════════════ VIEWER BANNER ══════════════ -->
 <div id="viewer-banner">
   🔒 <b>Read-only mode.</b>
@@ -724,6 +733,31 @@ const tVL = mkChart('t-vl', C.map(c=>mkDS(c)));
 const tDP = mkChart('t-dp', C.map(c=>mkDS(c)));
 const idrC= mkChart('idr-c',[mkDS('#ef4444')]);
 
+// ── Empty-state plugin: draws "Waiting for data…" on blank charts ──
+// Registered globally so every chart instance picks it up automatically.
+Chart.register({
+  id: 'emptyState',
+  afterDraw(chart) {
+    if (chart.data.labels.length > 0) return;
+    const { ctx, width: w, height: h } = chart;
+    ctx.save();
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle    = '#334155';
+    ctx.font         = '10px JetBrains Mono, monospace';
+    ctx.fillText('Waiting for data…', w / 2, h / 2);
+    ctx.restore();
+  }
+});
+
+// ── Force-resize all charts once the grid has finished laying out ──
+// Chart.js reads canvas dimensions at creation time. With CSS grid the
+// columns aren't measured until after the first paint, so we resize
+// inside a rAF to guarantee correct widths.
+requestAnimationFrame(() => {
+  [gAC,gVL,gDP,tAC,tVL,tDP,idrC].forEach(ch => ch.resize());
+});
+
 function push(ch, ts, vals) {
   const lbl = new Date(ts).toLocaleTimeString('en-US',{hour12:false});
   ch.data.labels.push(lbl);
@@ -793,6 +827,7 @@ function connectMQTT() {
   mqttClient.on('connect', () => {
     setConn('live');
     mqttClient.subscribe([T_GND,T_TOP,T_STAT],{qos:1});
+    document.getElementById('no-mqtt-banner').style.display = 'none';
   });
   mqttClient.on('message', (topic,payload) => {
     try {
@@ -1026,10 +1061,21 @@ function updateCtr(){document.getElementById('s-counter').textContent=`Ground: $
   loadIssues();
   setInterval(loadIssues, 5 * 60 * 1000);
 
-  // 5. First-time: open setup modal if no password has ever been set
+  // 5. Show MQTT warning if host has never been configured
+  if (!loadCfg().host) {
+    document.getElementById('no-mqtt-banner').style.display = 'block';
+  }
+
+  // 6. First-time: open setup modal if no password has ever been set
   if (!hasHash()) {
     setTimeout(() => openM('m-setup'), 500);
   }
+
+  // 7. Second resize pass after full render (belt-and-suspenders for
+  //    browsers that batch the first rAF before grid paint completes)
+  setTimeout(() => {
+    [gAC,gVL,gDP,tAC,tVL,tDP,idrC].forEach(ch => ch.resize());
+  }, 250);
 })();
 </script>
 </body>

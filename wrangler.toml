@@ -16,6 +16,6 @@
 # dashboard — that is the Workers command and will always fail
 # for a Pages project.
 
-name = "4l-eri-ctu"
+name = "eri-dashboard"
 pages_build_output_dir = "."
 compatibility_date = "2024-09-01"
